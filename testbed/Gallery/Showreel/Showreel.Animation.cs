@@ -225,7 +225,7 @@ public sealed partial class Showreel
     /// <summary>The hero rises through the floor, swallows the stream, punches and vanishes.</summary>
     private Tweens.Keyframes Hero() => Timeline([
         Key.At(0, position: (0, -6, 0), rotationDegrees: (0, 0, 0), scale: 0.01),
-        Key.At(T(10.2), position: (0, -6, 0), scale: 0.4),
+        Key.At(T(10.2), position: (0, -6, 0), scale: 0.01),
         Key.At(T(11.3), position: (0, 0.3, 0), rotationDegrees: (20, 60, 0), scale: 1.4, interpolation: Out.Back),
         Key.At(T(13.25), rotationDegrees: (25, 110, 10), scale: 1.1),
         Key.At(T(13.4), scale: 2.2, interpolation: Out.Quad),

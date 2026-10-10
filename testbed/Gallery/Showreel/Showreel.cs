@@ -59,6 +59,8 @@ public sealed partial class Showreel : GalleryEffect
         var floor = Own(new StandardMaterial3D
         {
             AlbedoTexture = Grid(), Uv1Scale = new Vector3(80, 80, 1), ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+            // Drawn first and never written to depth, so the floor cannot clip anything below or behind it.
+            DepthDrawMode = BaseMaterial3D.DepthDrawModeEnum.Disabled, RenderPriority = (int)Material.RenderPriorityMin,
         });
         Mesh(scene.View, new PlaneMesh { Size = new Vector2(80, 80) }, floor, new Vector3(0, -1.4f, 0));
 
@@ -88,7 +90,6 @@ public sealed partial class Showreel : GalleryEffect
             Direction = Vector3.Up, Spread = 180, InitialVelocityMin = 5, InitialVelocityMax = 13, Gravity = new Vector3(0, -6, 0),
             DampingMin = 2, DampingMax = 5, ScaleMin = 0.6f, ScaleMax = 1.4f, ColorInitialRamp = Confetti(),
         }, new Vector2(0.05f, 0.45f));
-        sparks.LocalCoords = false;
 
         // Flat bars in front of the lens wipe across the frame between acts.
         Color[] wipeColors = [TweensBlue, GdGreen, Pink];
@@ -201,16 +202,19 @@ public sealed partial class Showreel : GalleryEffect
         return Own(new GradientTexture1D { Gradient = gradient, UseHdr = true });
     }
 
-    /// <summary>Stretched quads aligned to their velocity. Keyframes raise the amount ratio to emit.</summary>
+    /// <summary>Stretched quads facing the camera along their velocity. Keyframes raise the amount ratio to emit.</summary>
     private GpuParticles3D Particles(Node parent, int amount, double lifetime, ParticleProcessMaterial process, Vector2 size)
     {
         var material = Own(new StandardMaterial3D
         {
+            // Additive and transparent, so particles draw after the floor and brighten what they cross.
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, VertexColorUseAsAlbedo = true,
+            Transparency = BaseMaterial3D.TransparencyEnum.Alpha, BlendMode = BaseMaterial3D.BlendModeEnum.Add,
         });
         return parent.Add(new GpuParticles3D
         {
-            Amount = amount, Lifetime = lifetime, AmountRatio = 0, ProcessMaterial = Own(process),
+            // World coordinates: aligning to velocity ignores the emitter rotation in local coordinates.
+            Amount = amount, Lifetime = lifetime, AmountRatio = 0, ProcessMaterial = Own(process), LocalCoords = false,
             DrawPass1 = Own(new QuadMesh { Size = size, Material = material }),
             TransformAlign = GpuParticles3D.TransformAlignEnum.ZBillboardYToVelocity,
             VisibilityAabb = new Aabb(new Vector3(-30, -30, -30), new Vector3(60, 60, 60)),

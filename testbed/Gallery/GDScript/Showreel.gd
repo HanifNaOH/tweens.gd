@@ -233,7 +233,7 @@ func ticker() -> TweensGdKeyframes:
 func hero() -> TweensGdKeyframes:
 	return timeline({
 		t(0): {"position": Vector3(0, -6, 0), "rotation_degrees": Vector3(0, 0, 0), "scale": 0.01},
-		t(10.2): {"position": Vector3(0, -6, 0), "scale": 0.4},
+		t(10.2): {"position": Vector3(0, -6, 0), "scale": 0.01},
 		t(11.3): {"position": Vector3(0, 0.3, 0), "rotation_degrees": Vector3(20, 60, 0), "scale": 1.4, "interpolation": Out.BACK},
 		t(13.25): {"rotation_degrees": Vector3(25, 110, 10), "scale": 1.1},
 		t(13.4): {"scale": 2.2, "interpolation": Out.QUAD},
