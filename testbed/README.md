@@ -48,9 +48,9 @@ dotnet run --project testbed/testbed.2dog -- --gallery-snapshots artifacts/galle
   or scrub to pause; **Animate** resumes. The tint-and-fade column treats RGB and opacity independently.
 - The Keyframes page plays one sparse definition on three flyers with different captured starting positions.
   Position, scale, rotation and color share its duration, ping-pong and repeats.
-- The Showreel page is a 20-second loop at the default leg duration. Every animated node plays one keyframe definition
-  spanning the loop, except the streaks and flat shapes: each repeats a short pass along a stream whose rotation sets the
-  flow direction. GPU particles emit while keyframes raise their amount ratio.
+- The Showreel page is a 20-second loop at the default leg duration. A dot crosses a page of printed words, and each
+  word stands up with the easing it names. Every animated node plays keyframe definitions spanning the loop; the dot and
+  the emitter laying its trail share one. GPU particles emit while keyframes raise their amount ratio.
 
 ## Layout
 
