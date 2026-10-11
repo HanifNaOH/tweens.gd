@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Moritz Voss
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Godot;
 using tweens.gd;
@@ -12,7 +13,7 @@ public sealed partial class Showreel : GalleryEffect
     // Warm paper and ink from the tweens.gd mascot; the wordmark keeps its blue and green.
     private static readonly Color Paper = new("f6f1e7"), Rule = new("ebe2d3"), Ink = new("3d2a22"), Ember = new("e0573c"),
         Saffron = new("f0a830"), Sand = new("e9c4a4"), Caramel = new("a36d48"), Terracotta = new("c8685a"), Coral = new("e07a5f"),
-        Shade = new("49201c"), TweensBlue = new("67a2dd"), GdGreen = new("9bd69c");
+        Shade = new("49201c"), TweensBlue = new("67a2dd"), GdGreen = new("9bd69c"), GodotBlue = new("478cbf");
     private const float Pixel = 0.004f, Radius = 0.14f;
     // Printed pieces float this far above the page; coplanar, the page's depth test against them would flicker.
     private const float Lift = 0.005f;
@@ -29,13 +30,16 @@ public sealed partial class Showreel : GalleryEffect
     private MeshInstance3D[] ripples = [], ticks = [];
     private Label3D[] from = [], to = [], ease = [], bounce = [], elastic = [], keyframes = [], diamonds = [], logo = [];
     private Label3D subtitle = null!;
+    private Label3D[] credit = [], engine = [], taglines = [];
+    // Dictionary definitions printed beside the path: their words, and the words that replace them when they shrink.
+    private (Label3D[] Words, Label3D[] Extra)[] glosses = [];
     private Vector3 period;
     private float cap;
     private ColorRect fade = null!;
-    private Font display = null!, mono = null!;
+    private Font display = null!, mono = null!, italic = null!;
 
     public override string Title => "Showreel";
-    public override string Caption => "A 20-second loop at the default leg duration. A dot crosses the page; each word it passes stands up and acts out its name.";
+    public override string Caption => "A 55-second loop at the default leg duration, timed to an 80 bpm track. A dot travels a page of words; each stands up and acts out its name.";
     /// <summary>Records exactly one loop.</summary>
     public override double RecordingSeconds => Length * Tempo;
 
@@ -78,6 +82,7 @@ public sealed partial class Showreel : GalleryEffect
 
         display = GD.Load<Font>("res://Fonts/BricolageGrotesque-ExtraBold.ttf");
         mono = GD.Load<Font>("res://Fonts/JetBrainsMono-Regular.ttf");
+        italic = Own(new FontVariation { BaseFont = mono, VariationTransform = new Transform2D(1, 0.2f, 0, 1, 0, 0) });
         cap = CapHeight * 170 * Pixel;
 
         // Each station word lies printed on the page until the animation stands it up.
@@ -87,6 +92,30 @@ public sealed partial class Showreel : GalleryEffect
         bounce = Word(scene.View, "BOUNCE", new Vector3(10.2f, 0, 0), 170, Terracotta);
         elastic = Word(scene.View, "ELASTIC", new Vector3(15.6f, 0, -0.6f), 170, Coral);
         keyframes = Word(scene.View, "KEYFRAMES", new Vector3(21.2f, 0, -0.85f), 150, Ink);
+        // The credit floats in the sky above the dot before it drops; the animation raises it from below. High above
+        // the page, its shadow would only smudge the paper.
+        credit = Word(scene.View, "FULLY CREATED IN", new Vector3(Middle(from), 3.45f, -1.6f), 100, Ink, flat: false);
+        engine = Word(scene.View, "GODOT 4.7", new Vector3(Middle(from), 2.7f, -1.6f), 250, GodotBlue, flat: false);
+        // Godot's MSDF rendering breaks where contours overlap, as in this font's 4; plain glyphs fill them correctly.
+        var solid = Own((FontFile)display.Duplicate());
+        solid.MultichannelSignedDistanceField = false;
+        foreach (var letter in credit.Concat(engine))
+        {
+            letter.Font = solid;
+            letter.Transparency = 1;
+            letter.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+        }
+        glosses = [
+            Define(scene.View, new Vector3(-2.4f, 0, 0.8f), 4.6f,
+                "tweens, n. An intermediate frame drawn between two keyframes to create smooth, continuous motion in animation.",
+                "fun, juice, polish"),
+            Define(scene.View, new Vector3(2.4f, 0, 0.8f), 5.6f,
+                "easing, n. A mathematical curve or function that controls the rate of acceleration or deceleration of an animation between keyframes to produce natural, organic motion.",
+                "pleasant, easy"),
+            Define(scene.View, new Vector3(13.6f, 0, 0.85f), 5.4f,
+                "elastic, a. Describing an easing function or motion that overshoots its target value and oscillates before coming to rest, mimicking the springy recoil of stretched rubber.",
+                "ferret trait"),
+        ];
 
         // A ruler at the positions an InOut.Cubic tween passes at equal time steps: an animator's spacing chart.
         var tickMaterial = Flat(Ember);
@@ -103,6 +132,15 @@ public sealed partial class Showreel : GalleryEffect
 
         BuildLogo(scene.View, new Vector3(27.6f, 0, -0.6f));
         subtitle = Text(scene.View, "procedural animation for Godot · C# and GDScript", mono, 48, Ink, new Vector3(27.6f, 0, 0.6f), flat: true);
+        // Two closing phrases, centered together as one line in front of the subtitle.
+        const int tagline = 44;
+        float Mono(string text) => mono.GetStringSize(text, HorizontalAlignment.Left, -1, tagline).X * Pixel;
+        var (free, store) = ("free and open source", "· available on Godot Asset Store");
+        var left = 27.6f - Mono(free + " " + store) / 2;
+        taglines = [
+            Text(scene.View, free, mono, tagline, Ink, new Vector3(left + Mono(free) / 2, 0, 1.25f), flat: true),
+            Text(scene.View, store, mono, tagline, Ink, new Vector3(left + Mono(free + " ") + Mono(store) / 2, 0, 1.25f), flat: true),
+        ];
 
         // Printed notes. The percentages mark where the dot is at each quarter of its one keyframed journey.
         Note(scene.View, "0%", new Vector3(Middle(from), 0, 0.55f));
@@ -110,9 +148,9 @@ public sealed partial class Showreel : GalleryEffect
         Note(scene.View, "slow", new Vector3(ticks[0].Position.X + 0.25f, 0, -0.7f));
         Note(scene.View, "fast", new Vector3(ticks[4].Position.X, 0, -0.7f));
         Note(scene.View, "slow", new Vector3(ticks[8].Position.X - 0.25f, 0, -0.7f));
-        Note(scene.View, "25%", new Vector3(ticks[2].Position.X, 0, 0.55f));
-        Note(scene.View, "50%", new Vector3(bounce[^1].Position.X, 0, 0.55f));
-        Note(scene.View, "75%", new Vector3(diamonds[7].Position.X, 0, 0.55f));
+        Note(scene.View, "25%", new Vector3(ticks[0].Position.X, 0, 0.55f));
+        Note(scene.View, "50%", new Vector3(bounce[3].Position.X, 0, 0.55f));
+        Note(scene.View, "75%", new Vector3((diamonds[5].Position.X + diamonds[6].Position.X) / 2, 0, 0.55f));
         Note(scene.View, "100%", new Vector3(period.X, 0, period.Z + 0.45f));
 
         // The traveller: a flat disc on a carrier that moves over the page; the disc hops and squashes above it.
@@ -124,7 +162,7 @@ public sealed partial class Showreel : GalleryEffect
         });
 
         // Lays one ink dot at a steady rate, so the trail doubles as a spacing chart: dense where the dot was slow.
-        trail = Particles(scene.View, 360, 20, new ParticleProcessMaterial
+        trail = Particles(scene.View, 1000, 55, new ParticleProcessMaterial
         {
             Gravity = Vector3.Zero, ScaleMin = 0.8f, ScaleMax = 1.2f, Color = Ink with { A = 0.7f },
         }, new QuadMesh { Size = new Vector2(0.07f, 0.07f), Orientation = PlaneMesh.OrientationEnum.Y }, billboard: false);
@@ -186,18 +224,58 @@ public sealed partial class Showreel : GalleryEffect
         RotationDegrees = flat ? new Vector3(-90, 0, 0) : Vector3.Zero,
     });
 
-    /// <summary>A word as separate letters at their natural advance, centered on <paramref name="center"/>, printed flat.</summary>
-    private Label3D[] Word(Node parent, string text, Vector3 center, int size, Color color)
+    /// <summary>Text as separate letters at their natural advance, centered on <paramref name="center"/>; spaces only
+    /// advance. Printed flat unless it stands.</summary>
+    private Label3D[] Word(Node parent, string text, Vector3 center, int size, Color color, bool flat = true)
     {
         var widths = text.Select(c => display.GetStringSize(c.ToString(), HorizontalAlignment.Left, -1, size).X * Pixel).ToArray();
         var x = center.X - widths.Sum() / 2;
-        var letters = new Label3D[text.Length];
-        for (var i = 0; i < letters.Length; i++)
+        var letters = new List<Label3D>();
+        for (var i = 0; i < text.Length; x += widths[i++])
         {
-            letters[i] = Text(parent, text[i].ToString(), display, size, color, new Vector3(x + widths[i] / 2, 0, center.Z), flat: true);
-            x += widths[i];
+            if (text[i] == ' ') continue;
+            letters.Add(Text(parent, text[i].ToString(), display, size, color, new Vector3(x + widths[i] / 2, center.Y, center.Z), flat));
         }
-        return letters;
+        return [.. letters];
+    }
+
+    /// <summary>A dictionary definition printed word by word from <paramref name="origin"/>, wrapped at
+    /// <paramref name="width"/>. Its first two words are the headword and part of speech, which stay when it shrinks;
+    /// <paramref name="extra"/> then follows them on the first line.</summary>
+    private (Label3D[] Words, Label3D[] Extra) Define(Node parent, Vector3 origin, float width, string text, string extra)
+    {
+        const int size = 44;
+        const float row = 0.27f;
+        float Width(string word) => italic.GetStringSize(word, HorizontalAlignment.Left, -1, size).X * Pixel;
+        var space = Width(" ");
+        var words = new List<Label3D>();
+        float x = origin.X, z = origin.Z, headEnd = origin.X;
+        foreach (var (word, i) in text.Split(' ').Select((word, i) => (word, i)))
+        {
+            if (x > origin.X && x + Width(word) > origin.X + width) (x, z) = (origin.X, z + row);
+            var color = i < 2 ? Ink : Ink with { A = 0.7f };
+            words.Add(Printed(parent, word, size, color, new Vector3(x + Width(word) / 2, 0, z)));
+            x += Width(word) + space;
+            if (i == 1) headEnd = x;
+        }
+        x = headEnd;
+        var added = new List<Label3D>();
+        foreach (var word in extra.Split(' '))
+        {
+            added.Add(Printed(parent, word, size, Terracotta, new Vector3(x + Width(word) / 2, 0, origin.Z)));
+            x += Width(word) + space;
+        }
+        return ([.. words], [.. added]);
+    }
+
+    /// <summary>An italic word printed on the page, hidden until the animation shows it.</summary>
+    private Label3D Printed(Node parent, string word, int size, Color color, Vector3 position)
+    {
+        var label = Text(parent, word, italic, size, color, position, flat: true);
+        label.AlphaCut = Label3D.AlphaCutMode.Disabled;
+        label.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+        label.Transparency = 1;
+        return label;
     }
 
     /// <summary>The wordmark standing on the page, with the logo's white outline and offset shade. The dot becomes its period.</summary>
@@ -316,6 +394,13 @@ public sealed partial class Showreel : GalleryEffect
         ["keyframes"] = new Godot.Collections.Array<Label3D>(keyframes),
         ["logo"] = new Godot.Collections.Array<Label3D>(logo),
         ["subtitle"] = subtitle,
+        ["credit"] = new Godot.Collections.Array<Label3D>(credit),
+        ["engine"] = new Godot.Collections.Array<Label3D>(engine),
+        ["taglines"] = new Godot.Collections.Array<Label3D>(taglines),
+        ["glosses"] = new Godot.Collections.Array<Godot.Collections.Dictionary>(glosses.Select(gloss => new Godot.Collections.Dictionary
+        {
+            ["words"] = new Godot.Collections.Array<Label3D>(gloss.Words), ["extra"] = new Godot.Collections.Array<Label3D>(gloss.Extra),
+        })),
         ["period"] = period,
         ["cap"] = cap,
         ["fade"] = fade,
