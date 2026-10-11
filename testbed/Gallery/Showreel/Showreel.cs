@@ -13,27 +13,33 @@ public sealed partial class Showreel : GalleryEffect
     // Warm paper and ink from the tweens.gd mascot; the wordmark keeps its blue and green.
     private static readonly Color Paper = new("f6f1e7"), Rule = new("ebe2d3"), Ink = new("3d2a22"), Ember = new("e0573c"),
         Saffron = new("f0a830"), Sand = new("e9c4a4"), Caramel = new("a36d48"), Terracotta = new("c8685a"), Coral = new("e07a5f"),
-        Shade = new("49201c"), TweensBlue = new("67a2dd"), GdGreen = new("9bd69c"), GodotBlue = new("478cbf");
+        Shade = new("49201c"), TweensBlue = new("67a2dd"), GdGreen = new("9bd69c");
     private const float Pixel = 0.004f, Radius = 0.14f;
     // Printed pieces float this far above the page; coplanar, the page's depth test against them would flicker.
     private const float Lift = 0.005f;
     // Bricolage Grotesque's cap height, in em.
     private const float CapHeight = 0.66f;
+    // Bricolage Grotesque's period, in em: the height of its center, and half its width and height.
+    private const float PeriodCenter = 0.0775f, PeriodWidth = 0.104f, PeriodHeight = 0.0905f;
     // The camera always shows this frame: a 16:9 view with this vertical field of view.
     private const float SafeAspect = 16f / 9, SafeFov = 46;
 
     private Node3D rig = null!;
+    // Each scene lies on its own patch of the page, turned and moved a little, so the path meanders between them.
+    private Node3D[] stations = [];
     private Camera3D camera = null!;
     private Node3D dot = null!;
-    private Sprite3D disc = null!;
+    private Sprite3D disc = null!, godot = null!;
+    private MeshInstance3D rim = null!;
     private GpuParticles3D trail = null!, dust = null!, confetti = null!;
     private MeshInstance3D[] ripples = [], ticks = [];
     private Label3D[] from = [], to = [], ease = [], bounce = [], elastic = [], keyframes = [], diamonds = [], logo = [];
     private Label3D subtitle = null!;
-    private Label3D[] credit = [], engine = [], taglines = [];
+    private Label3D[] credit = [], taglines = [];
     // Dictionary definitions printed beside the path: their words, and the words that replace them when they shrink.
     private (Label3D[] Words, Label3D[] Extra)[] glosses = [];
-    private Vector3 period;
+    // Where the disc settles as the wordmark's period, its scale there, and the scale of its rim relative to it.
+    private Vector3 period, periodScale, rimScale;
     private float cap;
     private ColorRect fade = null!;
     private Font display = null!, mono = null!, italic = null!;
@@ -85,80 +91,108 @@ public sealed partial class Showreel : GalleryEffect
         italic = Own(new FontVariation { BaseFont = mono, VariationTransform = new Transform2D(1, 0.2f, 0, 1, 0, 0) });
         cap = CapHeight * 170 * Pixel;
 
+        stations = [
+            Station(scene.View, -0.4f, new Vector2(0, 0), 8), Station(scene.View, 5.1f, new Vector2(0.1f, 0.4f), -13),
+            Station(scene.View, 10.2f, new Vector2(0.4f, 0.45f), 16), Station(scene.View, 15.6f, new Vector2(1.25f, -0.55f), -11),
+            Station(scene.View, 21.2f, new Vector2(1.05f, -0.7f), 14), Station(scene.View, 27.6f, new Vector2(1.2f, -1.25f), -5),
+        ];
         // Each station word lies printed on the page until the animation stands it up.
-        from = Word(scene.View, "FROM", new Vector3(-2, 0, -0.8f), 170, Caramel);
-        to = Word(scene.View, "TO", new Vector3(1.2f, 0, -0.8f), 170, Terracotta);
-        ease = Word(scene.View, "EASE", new Vector3(5.1f, 0, -1.25f), 170, Ink);
-        bounce = Word(scene.View, "BOUNCE", new Vector3(10.2f, 0, 0), 170, Terracotta);
-        elastic = Word(scene.View, "ELASTIC", new Vector3(15.6f, 0, -0.6f), 170, Coral);
-        keyframes = Word(scene.View, "KEYFRAMES", new Vector3(21.2f, 0, -0.85f), 150, Ink);
+        from = Word(stations[0], "FROM", new Vector3(-2, 0, -0.8f), 170, Caramel);
+        to = Word(stations[0], "TO", new Vector3(1.2f, 0, -0.8f), 170, Terracotta);
+        ease = Word(stations[1], "EASE", new Vector3(5.1f, 0, -1.25f), 170, Ink);
+        bounce = Word(stations[2], "BOUNCE", new Vector3(10.2f, 0, 0), 170, Terracotta);
+        elastic = Word(stations[3], "ELASTIC", new Vector3(15.6f, 0, -0.6f), 170, Coral);
+        keyframes = Word(stations[4], "KEYFRAMES", new Vector3(21.2f, 0, -0.85f), 150, Ink);
         // The credit floats in the sky above the dot before it drops; the animation raises it from below. High above
         // the page, its shadow would only smudge the paper.
-        credit = Word(scene.View, "FULLY CREATED IN", new Vector3(Middle(from), 3.45f, -1.6f), 100, Ink, flat: false);
-        engine = Word(scene.View, "GODOT 4.7", new Vector3(Middle(from), 2.7f, -1.6f), 250, GodotBlue, flat: false);
-        // Godot's MSDF rendering breaks where contours overlap, as in this font's 4; plain glyphs fill them correctly.
-        var solid = Own((FontFile)display.Duplicate());
-        solid.MultichannelSignedDistanceField = false;
-        foreach (var letter in credit.Concat(engine))
+        var logotype = GD.Load<Texture2D>("res://Logos/godot-logotype.svg");
+        const float logoWidth = 4, logoBottom = 2.5f;
+        var logoHeight = logoWidth * logotype.GetHeight() / logotype.GetWidth();
+        godot = stations[0].Add(new Sprite3D
         {
-            letter.Font = solid;
-            letter.Transparency = 1;
-            letter.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+            Texture = logotype, PixelSize = logoWidth / logotype.GetWidth(), Shaded = false,
+            AlphaCut = SpriteBase3D.AlphaCutMode.OpaquePrepass, Position = new Vector3(Middle(from), logoBottom + logoHeight / 2, -1.6f),
+        });
+        credit = Word(stations[0], "FULLY CREATED IN", new Vector3(Middle(from), logoBottom + logoHeight + 0.14f, -1.6f), 100, Ink, flat: false);
+        foreach (var node in credit.Append<GeometryInstance3D>(godot))
+        {
+            node.Transparency = 1;
+            node.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
         }
         glosses = [
-            Define(scene.View, new Vector3(-2.4f, 0, 0.8f), 4.6f,
+            Define(stations[0], new Vector3(-2.4f, 0, 0.8f), 4.6f,
                 "tweens, n. An intermediate frame drawn between two keyframes to create smooth, continuous motion in animation.",
                 "fun, juice, polish"),
-            Define(scene.View, new Vector3(2.4f, 0, 0.8f), 5.6f,
+            Define(stations[1], new Vector3(3.5f, 0, 0.8f), 5,
                 "easing, n. A mathematical curve or function that controls the rate of acceleration or deceleration of an animation between keyframes to produce natural, organic motion.",
                 "pleasant, easy"),
-            Define(scene.View, new Vector3(13.6f, 0, 0.85f), 5.4f,
+            Define(stations[2], new Vector3(8.7f, 0, 0.95f), 4.6f,
+                "bounce, v. To spring back after striking a surface, a little lower each time.",
+                "to leave the party"),
+            Define(stations[3], new Vector3(13.6f, 0, 0.85f), 5,
                 "elastic, a. Describing an easing function or motion that overshoots its target value and oscillates before coming to rest, mimicking the springy recoil of stretched rubber.",
-                "ferret trait"),
+                "something that ferrets are"),
+            Define(stations[4], new Vector3(19.4f, 0, 0.9f), 4.6f,
+                "keyframes, n. The values an animator sets at chosen moments; everything in between is interpolated.",
+                "frames, but important"),
         ];
 
         // A ruler at the positions an InOut.Cubic tween passes at equal time steps: an animator's spacing chart.
         var tickMaterial = Flat(Ember);
         ticks = Enumerable.Range(0, 9).Select(i =>
         {
-            var tick = Mesh(scene.View, new QuadMesh { Size = new Vector2(0.05f, 0.34f), CenterOffset = new Vector3(0, 0.17f, 0) },
+            var tick = Mesh(stations[1], new QuadMesh { Size = new Vector2(0.05f, 0.34f), CenterOffset = new Vector3(0, 0.17f, 0) },
                 tickMaterial, new Vector3(2.6f + 5 * Easing.Evaluate(InOut.Cubic, i / 8f), Lift, -0.3f));
             tick.RotationDegrees = new Vector3(-90, 0, 0);
             return tick;
         }).ToArray();
         // One key per KEYFRAMES letter, weaving to either side of the dot's path.
-        diamonds = keyframes.Select((letter, i) => Text(scene.View, "◆", mono, 110, Sand,
+        diamonds = keyframes.Select((letter, i) => Text(stations[4], "◆", mono, 110, Sand,
             new Vector3(letter.Position.X, 0, i % 2 == 0 ? 0.25f : -0.25f), flat: true)).ToArray();
 
-        BuildLogo(scene.View, new Vector3(27.6f, 0, -0.6f));
-        subtitle = Text(scene.View, "procedural animation for Godot · C# and GDScript", mono, 48, Ink, new Vector3(27.6f, 0, 0.6f), flat: true);
+        BuildLogo(stations[5], new Vector3(27.6f, 0, -0.6f));
+        subtitle = Text(stations[5], "procedural animation for Godot · C# and GDScript", mono, 48, Ink, new Vector3(27.6f, 0, 0.6f), flat: true);
         // Two closing phrases, centered together as one line in front of the subtitle.
         const int tagline = 44;
         float Mono(string text) => mono.GetStringSize(text, HorizontalAlignment.Left, -1, tagline).X * Pixel;
         var (free, store) = ("free and open source", "· available on Godot Asset Store");
         var left = 27.6f - Mono(free + " " + store) / 2;
         taglines = [
-            Text(scene.View, free, mono, tagline, Ink, new Vector3(left + Mono(free) / 2, 0, 1.25f), flat: true),
-            Text(scene.View, store, mono, tagline, Ink, new Vector3(left + Mono(free + " ") + Mono(store) / 2, 0, 1.25f), flat: true),
+            Text(stations[5], free, mono, tagline, Ink, new Vector3(left + Mono(free) / 2, 0, 1.25f), flat: true),
+            Text(stations[5], store, mono, tagline, Ink, new Vector3(left + Mono(free + " ") + Mono(store) / 2, 0, 1.25f), flat: true),
         ];
 
         // Printed notes. The percentages mark where the dot is at each quarter of its one keyframed journey.
-        Note(scene.View, "0%", new Vector3(Middle(from), 0, 0.55f));
-        Note(scene.View, "→", new Vector3((Middle(from) + Middle(to)) / 2, 0, 0.25f));
-        Note(scene.View, "slow", new Vector3(ticks[0].Position.X + 0.25f, 0, -0.7f));
-        Note(scene.View, "fast", new Vector3(ticks[4].Position.X, 0, -0.7f));
-        Note(scene.View, "slow", new Vector3(ticks[8].Position.X - 0.25f, 0, -0.7f));
-        Note(scene.View, "25%", new Vector3(ticks[0].Position.X, 0, 0.55f));
-        Note(scene.View, "50%", new Vector3(bounce[3].Position.X, 0, 0.55f));
-        Note(scene.View, "75%", new Vector3((diamonds[5].Position.X + diamonds[6].Position.X) / 2, 0, 0.55f));
-        Note(scene.View, "100%", new Vector3(period.X, 0, period.Z + 0.45f));
+        Note(stations[0], "0%", new Vector3(Middle(from), 0, 0.55f));
+        Note(stations[0], "→", new Vector3((Middle(from) + Middle(to)) / 2, 0, 0.25f));
+        Note(stations[1], "slow", new Vector3(ticks[0].Position.X + 0.25f, 0, -0.7f));
+        Note(stations[1], "fast", new Vector3(ticks[4].Position.X, 0, -0.7f));
+        Note(stations[1], "slow", new Vector3(ticks[8].Position.X - 0.25f, 0, -0.7f));
+        Note(stations[1], "25%", new Vector3(ticks[0].Position.X, 0, 0.55f));
+        Note(stations[2], "50%", new Vector3(bounce[3].Position.X, 0, 0.55f));
+        Note(stations[4], "75%", new Vector3((diamonds[5].Position.X + diamonds[6].Position.X) / 2, 0, 0.55f));
+        Note(stations[5], "100%", new Vector3(period.X, 0, period.Z + 0.45f));
 
         // The traveller: a flat disc on a carrier that moves over the page; the disc hops and squashes above it.
-        dot = scene.View.Add(new Node3D { Position = new Vector3(Middle(from), 0, 0) });
+        var start = On(0, new Vector3(Middle(from), 0, 0));
+        dot = scene.View.Add(new Node3D { Position = start });
         disc = dot.Add(new Sprite3D
         {
             Texture = Circle(), PixelSize = 2 * Radius / 128, Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
             Shaded = false, AlphaCut = SpriteBase3D.AlphaCutMode.OpaquePrepass, Modulate = Ember, Position = new Vector3(0, 3.2f, 0),
+        });
+        // A white ball around the disc that draws only its back faces: they lie behind the disc, which covers all but a rim.
+        // It sits 4 cm behind the disc; at the period, that is 1 cm behind the letters, which then cover its edge.
+        rim = disc.Add(new MeshInstance3D
+        {
+            Position = new Vector3(0, 0, -0.04f),
+            Mesh = Own(new SphereMesh { Radius = Radius, Height = 2 * Radius, RadialSegments = 64, Rings = 32 }),
+            MaterialOverride = Own(new StandardMaterial3D
+            {
+                AlbedoColor = Colors.White, ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                CullMode = BaseMaterial3D.CullModeEnum.Front,
+            }),
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         });
 
         // Lays one ink dot at a steady rate, so the trail doubles as a spacing chart: dense where the dot was slow.
@@ -166,7 +200,7 @@ public sealed partial class Showreel : GalleryEffect
         {
             Gravity = Vector3.Zero, ScaleMin = 0.8f, ScaleMax = 1.2f, Color = Ink with { A = 0.7f },
         }, new QuadMesh { Size = new Vector2(0.07f, 0.07f), Orientation = PlaneMesh.OrientationEnum.Y }, billboard: false);
-        trail.Position = new Vector3(Middle(from), 0.012f, 0);
+        trail.Position = start with { Y = 0.012f };
         var fadeOut = Own(new GradientTexture1D { Gradient = Own(new Gradient { Colors = [Colors.White, Colors.White with { A = 0 }] }) });
         dust = Particles(scene.View, 140, 0.9, new ParticleProcessMaterial
         {
@@ -174,8 +208,8 @@ public sealed partial class Showreel : GalleryEffect
             DampingMin = 1.5f, DampingMax = 3, ScaleMin = 0.6f, ScaleMax = 1.3f, ColorRamp = fadeOut,
             ColorInitialRamp = Pick(Sand, Caramel, Coral),
         }, new QuadMesh { Size = new Vector2(0.06f, 0.06f) }, billboard: true);
-        dust.Position = new Vector3(Middle(from), 0.03f, 0);
-        confetti = Particles(scene.View, 240, 2.6, new ParticleProcessMaterial
+        dust.Position = start with { Y = 0.03f };
+        confetti = Particles(stations[5], 240, 2.6, new ParticleProcessMaterial
         {
             Direction = Vector3.Up, Spread = 40, InitialVelocityMin = 3, InitialVelocityMax = 5.5f, Gravity = new Vector3(0, -3.5f, 0),
             DampingMin = 0.6f, DampingMax = 1.2f, AngleMin = 0, AngleMax = 360, AngularVelocityMin = -180, AngularVelocityMax = 180,
@@ -197,7 +231,7 @@ public sealed partial class Showreel : GalleryEffect
         var ring = Flat(Terracotta);
         ripples = Enumerable.Range(0, 3).Select(_ =>
         {
-            var ripple = Mesh(scene.View, new TorusMesh { InnerRadius = 0.96f, OuterRadius = 1, Rings = 64 }, ring, new Vector3(Middle(from), 0.01f, 0));
+            var ripple = Mesh(scene.View, new TorusMesh { InnerRadius = 0.96f, OuterRadius = 1, Rings = 64 }, ring, start with { Y = 0.01f });
             ripple.Transparency = 1;
             ripple.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
             return ripple;
@@ -213,6 +247,19 @@ public sealed partial class Showreel : GalleryEffect
         camera.KeepAspect = wide ? Camera3D.KeepAspectEnum.Height : Camera3D.KeepAspectEnum.Width;
         camera.Fov = wide ? SafeFov : Mathf.RadToDeg(2 * MathF.Atan(MathF.Tan(Mathf.DegToRad(SafeFov) / 2) * SafeAspect));
     }
+
+    /// <summary>A station whose content keeps its page coordinates: it turns by <paramref name="yaw"/> degrees about
+    /// the page point (<paramref name="pivot"/>, 0, 0) and moves by <paramref name="shift"/> over the page.</summary>
+    private static Node3D Station(Node parent, float pivot, Vector2 shift, float yaw)
+    {
+        var station = parent.Add(new Node3D { RotationDegrees = new Vector3(0, yaw, 0) });
+        var hinge = new Vector3(pivot, 0, 0);
+        station.Position = hinge + new Vector3(shift.X, 0, shift.Y) - station.Basis * hinge;
+        return station;
+    }
+
+    /// <summary>A page point on a station, in the world.</summary>
+    private Vector3 On(int station, Vector3 page) => stations[station].Transform * page;
 
     /// <summary>Flat type standing on its baseline at the node origin, so it rests on the page and hinges at its foot.</summary>
     private Label3D Text(Node parent, string text, Font font, int size, Color color, Vector3 position, bool flat) => parent.Add(new Label3D
@@ -282,7 +329,7 @@ public sealed partial class Showreel : GalleryEffect
     private void BuildLogo(Node parent, Vector3 center)
     {
         const string wordmark = "TWEENS.GD";
-        const int size = 225;
+        const int size = 225, outlineSize = size / 48;
         var widths = wordmark.Select(c => display.GetStringSize(c.ToString(), HorizontalAlignment.Left, -1, size).X * Pixel).ToArray();
         var x = center.X - widths.Sum() / 2;
         logo = new Label3D[wordmark.Length - 1];
@@ -291,11 +338,19 @@ public sealed partial class Showreel : GalleryEffect
             var position = new Vector3(x + widths[i] / 2, 0, center.Z);
             if (wordmark[i] == '.')
             {
-                period = position;
+                // The disc takes the period's place a little in front of the letters, so it never shares their depth.
+                var em = size * Pixel;
+                period = position + new Vector3(0, PeriodCenter * em, 0.03f);
+                var radii = new Vector3(PeriodWidth, PeriodHeight, PeriodWidth) * em;
+                periodScale = (radii / Radius) with { Z = 1 };
+                // Label3D draws MSDF outlines in MSDF texels, of which the font has msdf_size per em.
+                var outline = (float)outlineSize / ((FontFile)display).MsdfSize * em;
+                // Flat in the letters' plane, the rim fits between their fills and their shades as their outlines do.
+                rimScale = ((radii + Vector3.One * outline) / radii) with { Z = 0.006f / Radius };
                 continue;
             }
             var glyph = logo[letter++] = Text(parent, wordmark[i].ToString(), display, size, i < 6 ? TweensBlue : GdGreen, position, flat: false);
-            glyph.OutlineSize = size / 48;
+            glyph.OutlineSize = outlineSize;
             glyph.OutlineModulate = Colors.White;
             var shade = Text(glyph, glyph.Text, display, size, Shade with { A = 0.45f }, new Vector3(0.012f, -0.03f, -0.02f), flat: false);
             shade.OutlineSize = size / 36;
@@ -377,9 +432,11 @@ public sealed partial class Showreel : GalleryEffect
     public override Godot.Collections.Dictionary SceneTargets => new()
     {
         ["rig"] = rig,
+        ["stations"] = new Godot.Collections.Array<Node3D>(stations),
         ["camera"] = camera,
         ["dot"] = dot,
         ["disc"] = disc,
+        ["rim"] = rim,
         ["trail"] = trail,
         ["dust"] = dust,
         ["confetti"] = confetti,
@@ -395,13 +452,15 @@ public sealed partial class Showreel : GalleryEffect
         ["logo"] = new Godot.Collections.Array<Label3D>(logo),
         ["subtitle"] = subtitle,
         ["credit"] = new Godot.Collections.Array<Label3D>(credit),
-        ["engine"] = new Godot.Collections.Array<Label3D>(engine),
+        ["godot"] = godot,
         ["taglines"] = new Godot.Collections.Array<Label3D>(taglines),
         ["glosses"] = new Godot.Collections.Array<Godot.Collections.Dictionary>(glosses.Select(gloss => new Godot.Collections.Dictionary
         {
             ["words"] = new Godot.Collections.Array<Label3D>(gloss.Words), ["extra"] = new Godot.Collections.Array<Label3D>(gloss.Extra),
         })),
         ["period"] = period,
+        ["periodScale"] = periodScale,
+        ["rimScale"] = rimScale,
         ["cap"] = cap,
         ["fade"] = fade,
     };
