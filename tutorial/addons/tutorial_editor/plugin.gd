@@ -8,7 +8,11 @@ class SceneDebugger extends EditorDebuggerPlugin:
 		return prefix == "tutorial"
 
 
-	func _capture(message: String, data: Array, _session_id: int) -> bool:
+	func _capture(message: String, data: Array, session_id: int) -> bool:
+		if message == "tutorial:focus_editor":
+			if data.is_empty():
+				_focus_editor.call_deferred()
+			return true
 		if message != "tutorial:open_scene":
 			return false
 		if data.size() == 1 and data[0] is String:
@@ -16,8 +20,15 @@ class SceneDebugger extends EditorDebuggerPlugin:
 			if path.begins_with("res://Lessons/") and path.ends_with(".tscn") and ResourceLoader.exists(path, "PackedScene"):
 				EditorInterface.open_scene_from_path.call_deferred(path)
 				EditorInterface.set_main_screen_editor.call_deferred("2D")
-				EditorInterface.get_base_control().get_window().grab_focus.call_deferred()
+				get_session(session_id).send_message("tutorial:focus_editor", [OS.get_process_id()])
 		return true
+
+
+	func _focus_editor() -> void:
+		var window := EditorInterface.get_base_control().get_window()
+		if window.mode == Window.MODE_MINIMIZED:
+			window.mode = Window.MODE_WINDOWED
+		window.grab_focus()
 
 
 var scene_debugger := SceneDebugger.new()

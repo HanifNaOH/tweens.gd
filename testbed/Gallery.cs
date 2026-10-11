@@ -36,6 +36,9 @@ public partial class Gallery : Control
     private Label durationLabel = null!;
     private HSlider duration = null!;
     private OptionButton languagePicker = null!;
+    private MarginContainer margin = null!;
+    private Control sidebar = null!;
+    private DisplayServer.WindowMode windowed = DisplayServer.WindowMode.Windowed;
     public GalleryLanguage Language { get; private set; }
     private GalleryPage? page;
     private EasingSelection easingSelection = EasingSelection.Default;
@@ -58,21 +61,16 @@ public partial class Gallery : Control
         AddChild(background);
         background.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
 
-        var margin = new MarginContainer();
+        margin = new MarginContainer();
         AddChild(margin);
         margin.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        foreach (var side in new[] { "left", "right", "top", "bottom" }) margin.AddThemeConstantOverride("margin_" + side, 16);
+        SetChrome(true);
 
-        var layout = new VBoxContainer();
-        layout.AddThemeConstantOverride("separation", 10);
-        margin.AddChild(layout);
-        layout.AddChild(BuildHeader());
-        layout.AddChild(new HSeparator());
-
-        var body = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
+        // The sidebar holds every control, so the examples get the window's full height.
+        var body = new HBoxContainer();
         body.AddThemeConstantOverride("separation", 16);
-        layout.AddChild(body);
-        body.AddChild(BuildSidebar());
+        margin.AddChild(body);
+        sidebar = body.Add(BuildSidebar());
         var scroll = new ScrollContainer
         {
             SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill,
@@ -81,61 +79,42 @@ public partial class Gallery : Control
         body.AddChild(scroll);
         content = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill };
         scroll.AddChild(content);
-
-        layout.AddChild(BuildActions());
     }
 
-    private HBoxContainer BuildHeader()
+    /// <summary>The title, settings and page navigation. It scrolls when the window is shorter than its contents.</summary>
+    private ScrollContainer BuildSidebar()
     {
-        var header = new HBoxContainer();
-        header.AddThemeConstantOverride("separation", 24);
-        var title = GalleryTheme.Label("tweens.gd / testbed", 22);
-        header.AddChild(title);
-        languagePicker = header.Add(new OptionButton
+        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        var sidebar = scroll.Add(new VBoxContainer { CustomMinimumSize = new Vector2(232, 0) });
+        sidebar.AddThemeConstantOverride("separation", 4);
+        sidebar.AddChild(GalleryTheme.Label("tweens.gd / testbed", 22));
+        sidebar.AddChild(new Control { CustomMinimumSize = new Vector2(0, 8) });
+
+        languagePicker = sidebar.Add(new OptionButton
         {
-            Name = "LanguageSwitch", CustomMinimumSize = new Vector2(160, 34),
+            Name = "LanguageSwitch", CustomMinimumSize = new Vector2(0, 34),
             TooltipText = "Switch the running tween implementation and restart this page",
         });
         languagePicker.AddItem("C# · Beta");
         languagePicker.AddItem("GDScript · Beta");
         languagePicker.Select((int)Language);
         languagePicker.ItemSelected += index => SelectLanguage((GalleryLanguage)index);
-        var settings = BuildSettings();
-        settings.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        header.AddChild(settings);
-        return header;
-    }
 
-    private HBoxContainer BuildSettings()
-    {
-        var settings = new HBoxContainer();
-        settings.AddThemeConstantOverride("separation", 10);
-
-        settings.AddChild(GalleryTheme.Label("Leg duration", 16, Palette.Muted));
-        durationLabel = GalleryTheme.Label("1.8 s");
-        durationLabel.CustomMinimumSize = new Vector2(44, 0);
-        settings.AddChild(durationLabel);
-        duration = new HSlider
-        {
-            MinValue = 0.4, MaxValue = 4, Step = 0.1, Value = 1.8,
-            CustomMinimumSize = new Vector2(120, 34), SizeFlagsHorizontal = SizeFlags.ExpandFill,
-        };
+        var timing = sidebar.Add(new HBoxContainer());
+        var timingLabel = timing.Add(GalleryTheme.Label("Leg duration", 16, Palette.Muted));
+        timingLabel.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        durationLabel = timing.Add(GalleryTheme.Label("1.8 s"));
+        duration = sidebar.Add(new HSlider { MinValue = 0.4, MaxValue = 4, Step = 0.1, Value = 1.8, CustomMinimumSize = new Vector2(0, 30) });
         duration.ValueChanged += seconds =>
         {
             durationLabel.Text = $"{seconds:0.0} s";
             RestartPage();
         };
-        settings.AddChild(duration);
+        var restart = sidebar.Add(new Button { Text = "Restart page", CustomMinimumSize = new Vector2(0, 34) });
+        restart.Pressed += RestartPage;
+        sidebar.AddChild(GalleryTheme.Label("Settings apply to the current page.", 13, Palette.Muted));
+        sidebar.AddChild(new HSeparator { CustomMinimumSize = new Vector2(0, 20) });
 
-        return settings;
-    }
-
-    /// <summary>Page navigation. It scrolls when the window is shorter than the page list.</summary>
-    private ScrollContainer BuildSidebar()
-    {
-        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
-        var sidebar = scroll.Add(new VBoxContainer { CustomMinimumSize = new Vector2(194, 0) });
-        sidebar.AddThemeConstantOverride("separation", 4);
         sidebar.AddChild(GalleryTheme.Label("EXAMPLES", 12, Palette.Muted));
 
         var idle = GalleryTheme.Box(Colors.Transparent, 8, 0, null, 14, 8);
@@ -150,7 +129,7 @@ public partial class Gallery : Control
             var button = new Button
             {
                 Text = $"{i + 1:00}  {PageNames[i]}", ToggleMode = true, FocusMode = FocusModeEnum.None,
-                Alignment = HorizontalAlignment.Left, CustomMinimumSize = new Vector2(194, 36),
+                Alignment = HorizontalAlignment.Left, CustomMinimumSize = new Vector2(0, 36),
             };
             button.AddThemeStyleboxOverride("normal", idle);
             button.AddThemeStyleboxOverride("hover", hover);
@@ -162,29 +141,104 @@ public partial class Gallery : Control
             navigation.Add(button);
         }
 
-        sidebar.AddChild(new Control { CustomMinimumSize = new Vector2(0, 6) });
-        sidebar.AddChild(GalleryTheme.Label("Settings apply to\nthe current page.", 14, Palette.Muted));
         return scroll;
     }
 
-    private HBoxContainer BuildActions()
+    /// <summary>Whether one example of the current page fills the window.</summary>
+    public bool IsFullscreen => page?.SoloEffect >= 0;
+
+    /// <summary>Shows only one example of the current page, magnified, and makes the window fullscreen.</summary>
+    public void EnterFullscreen(int effect) => Fill(effect, recording: false);
+
+    private void Fill(int effect, bool recording)
     {
-        var actions = new HBoxContainer();
-        actions.AddThemeConstantOverride("separation", 10);
-        ActionButton(actions, "Restart page", RestartPage);
-        return actions;
+        if (page is null) return;
+        // The page measures the card before the chrome hides, so the example keeps its layout.
+        page.ShowSolo(effect, exitButton: !recording);
+        SetChrome(false);
+        // A movie keeps the window size it started with, so recordings leave the window as it is.
+        if (recording) return;
+        windowed = DisplayServer.WindowGetMode();
+        if (windowed != DisplayServer.WindowMode.Fullscreen) DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
     }
 
-    private static void ActionButton(HBoxContainer row, string text, Action action)
+    public void ExitFullscreen()
     {
-        var button = new Button { Text = text, CustomMinimumSize = new Vector2(100, 34) };
-        button.Pressed += action;
-        row.AddChild(button);
+        if (!IsFullscreen) return;
+        // Leaving a recording ends it; quitting lets Movie Maker finish the file.
+        if (recordFrames >= 0)
+        {
+            GetTree().Quit();
+            return;
+        }
+        page!.ShowGallery();
+        SetChrome(true);
+        if (DisplayServer.WindowGetMode() != windowed) DisplayServer.WindowSetMode(windowed);
+    }
+
+    private void SetChrome(bool visible)
+    {
+        if (sidebar is not null) sidebar.Visible = visible;
+        foreach (var side in new[] { "left", "right", "top", "bottom" }) margin.AddThemeConstantOverride("margin_" + side, visible ? 16 : 0);
+    }
+
+    public override void _UnhandledInput(InputEvent input)
+    {
+        if (!IsFullscreen || !input.IsActionPressed("ui_cancel")) return;
+        ExitFullscreen();
+        GetViewport().SetInputAsHandled();
+    }
+
+    /// <summary>Frames per second of a recording; each frame advances the examples by exactly one frame's time.</summary>
+    public const int RecordingFps = 60;
+    /// <summary>Set by a host that can restart into a recording run. It shows each card's Record button.</summary>
+    public static bool CanRecord { get; set; }
+    /// <summary>The recording that a Record button asked for. The host consumes it after the gallery quits.</summary>
+    public static GalleryRecording? RequestedRecording { get; set; }
+    private int recordEffect = -1;
+    private bool recordPending;
+    private long recordFrames = -1;
+
+    /// <summary>Godot writes movies only from startup, so the gallery quits and the host restarts it to record.</summary>
+    public void RequestRecording(int effect)
+    {
+        if (page is null) return;
+        RequestedRecording = new GalleryRecording(SelectedPage, effect, Language, duration.Value);
+        GetTree().Quit();
+    }
+
+    /// <summary>Records one example in a Movie Maker run: once its page starts, the example fills the window without
+    /// controls, and the gallery quits after the example's recording length so Godot finishes the file.</summary>
+    public void Record(int effect) => recordEffect = effect;
+
+    /// <summary>Sets the leg duration for the next page start, without restarting the current page.</summary>
+    public void SetLegDuration(double seconds)
+    {
+        duration.SetValueNoSignal(seconds);
+        durationLabel.Text = $"{duration.Value:0.0} s";
+    }
+
+    public override void _Process(double delta)
+    {
+        if (recordPending)
+        {
+            recordPending = false;
+            Fill(recordEffect, recording: true);
+            recordFrames = (long)Math.Round(page!.Effects[recordEffect].RecordingSeconds * RecordingFps);
+        }
+        else if (recordFrames > 0 && --recordFrames == 0) GetTree().Quit();
     }
 
     public void SelectPage(int index)
     {
         if (index < 0 || index >= Pages.Length) throw new ArgumentOutOfRangeException(nameof(index));
+        if (!IsInsideTree() || content is null) return;
+        ExitFullscreen();
+        Load(index);
+    }
+
+    private void Load(int index)
+    {
         if (!IsInsideTree() || content is null) return;
         DestroyPage();
         SelectedPage = index;
@@ -195,6 +249,9 @@ public partial class Gallery : Control
         page.Language = Language;
         page.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         page.SizeFlagsVertical = SizeFlags.ExpandFill;
+        page.FullscreenRequested += EnterFullscreen;
+        page.RecordRequested += RequestRecording;
+        page.FullscreenExitRequested += ExitFullscreen;
         content.AddChild(page);
 
         // Start once the page's layout has settled. Bound to this node, so Godot drops the call if the gallery is
@@ -209,6 +266,8 @@ public partial class Gallery : Control
         try
         {
             page.Start(duration.Value);
+            // A recording starts once the page is laid out, so the card it magnifies has its size.
+            recordPending = recordEffect >= 0;
         }
         catch (Exception error)
         {
@@ -230,8 +289,12 @@ public partial class Gallery : Control
     {
         if (content is null) return;
         var selectedEffect = page?.SelectedEffect ?? -1;
-        SelectPage(SelectedPage);
+        var solo = page?.SoloEffect ?? -1;
+        var soloSize = page?.SoloSize ?? default;
+        // A restart keeps the open source view, or the example filling the window.
+        Load(SelectedPage);
         if (selectedEffect >= 0) page?.ShowSource(selectedEffect);
+        else if (solo >= 0) page?.ShowSolo(solo, soloSize);
     }
 
     private void DestroyPage()
@@ -251,3 +314,6 @@ public partial class Gallery : Control
         themeResources.Clear();
     }
 }
+
+/// <summary>An example to record: its page, its index on the page, and the settings it plays with.</summary>
+public sealed record GalleryRecording(int Page, int Effect, GalleryLanguage Language, double Duration);

@@ -23,6 +23,9 @@ public abstract partial class GalleryEffect
     public abstract string Title { get; }
     public abstract string Caption { get; }
 
+    /// <summary>How long a recording of this example lasts, in seconds.</summary>
+    public virtual double RecordingSeconds => 10;
+
     /// <summary>The complete animation task started by Animate.</summary>
     public Task? Sequence { get; protected set; }
 

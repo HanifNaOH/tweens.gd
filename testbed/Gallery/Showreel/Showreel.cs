@@ -14,8 +14,12 @@ public sealed partial class Showreel : GalleryEffect
         Saffron = new("f0a830"), Sand = new("e9c4a4"), Caramel = new("a36d48"), Terracotta = new("c8685a"), Coral = new("e07a5f"),
         Shade = new("49201c"), TweensBlue = new("67a2dd"), GdGreen = new("9bd69c");
     private const float Pixel = 0.004f, Radius = 0.14f;
+    // Printed pieces float this far above the page; coplanar, the page's depth test against them would flicker.
+    private const float Lift = 0.005f;
     // Bricolage Grotesque's cap height, in em.
     private const float CapHeight = 0.66f;
+    // The camera always shows this frame: a 16:9 view with this vertical field of view.
+    private const float SafeAspect = 16f / 9, SafeFov = 46;
 
     private Node3D rig = null!;
     private Camera3D camera = null!;
@@ -32,6 +36,8 @@ public sealed partial class Showreel : GalleryEffect
 
     public override string Title => "Showreel";
     public override string Caption => "A 20-second loop at the default leg duration. A dot crosses the page; each word it passes stands up and acts out its name.";
+    /// <summary>Records exactly one loop.</summary>
+    public override double RecordingSeconds => Length * Tempo;
 
     protected override void Build()
     {
@@ -41,7 +47,7 @@ public sealed partial class Showreel : GalleryEffect
         environment.TonemapMode = Godot.Environment.ToneMapper.Linear;
         environment.GlowEnabled = false;
         environment.AmbientLightColor = Colors.White;
-        environment.AmbientLightEnergy = 0.62f;
+        environment.AmbientLightEnergy = 0.69f;
         environment.FogLightColor = Paper;
         environment.FogDensity = 0.012f;
         // A low sun at the front left: the lit page matches the background, and type casts soft, light shadows.
@@ -56,13 +62,14 @@ public sealed partial class Showreel : GalleryEffect
         camera = scene.Camera;
         camera.Reparent(rig, false);
         camera.Transform = new Transform3D(Basis.Identity, new Vector3(0, 0, 5));
-        camera.Fov = 34;
+        Frame(scene.View);
+        scene.View.SizeChanged += () => Frame(scene.View);
         camera.Far = 80;
 
         var page = Own(new StandardMaterial3D
         {
             AlbedoTexture = Grid(), Uv1Scale = new Vector3(300, 300, 1), Roughness = 1, MetallicSpecular = 0,
-            SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled,
+            SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled, DiffuseMode = BaseMaterial3D.DiffuseModeEnum.Lambert,
             // Drawn first and never written to depth, so the page cannot clip anything on or below it.
             DepthDrawMode = BaseMaterial3D.DepthDrawModeEnum.Disabled, RenderPriority = (int)Material.RenderPriorityMin,
         });
@@ -86,7 +93,7 @@ public sealed partial class Showreel : GalleryEffect
         ticks = Enumerable.Range(0, 9).Select(i =>
         {
             var tick = Mesh(scene.View, new QuadMesh { Size = new Vector2(0.05f, 0.34f), CenterOffset = new Vector3(0, 0.17f, 0) },
-                tickMaterial, new Vector3(2.6f + 5 * Easing.Evaluate(InOut.Cubic, i / 8f), 0, -0.3f));
+                tickMaterial, new Vector3(2.6f + 5 * Easing.Evaluate(InOut.Cubic, i / 8f), Lift, -0.3f));
             tick.RotationDegrees = new Vector3(-90, 0, 0);
             return tick;
         }).ToArray();
@@ -161,13 +168,21 @@ public sealed partial class Showreel : GalleryEffect
         fade = Fill(new ColorRect { Color = Paper, MouseFilter = Control.MouseFilterEnum.Ignore }, 0);
     }
 
+    /// <summary>Wider stages keep the safe frame's height, narrower ones its width, so nothing in it is cropped.</summary>
+    private void Frame(SubViewport view)
+    {
+        var wide = view.Size.X >= view.Size.Y * SafeAspect;
+        camera.KeepAspect = wide ? Camera3D.KeepAspectEnum.Height : Camera3D.KeepAspectEnum.Width;
+        camera.Fov = wide ? SafeFov : Mathf.RadToDeg(2 * MathF.Atan(MathF.Tan(Mathf.DegToRad(SafeFov) / 2) * SafeAspect));
+    }
+
     /// <summary>Flat type standing on its baseline at the node origin, so it rests on the page and hinges at its foot.</summary>
     private Label3D Text(Node parent, string text, Font font, int size, Color color, Vector3 position, bool flat) => parent.Add(new Label3D
     {
         Text = text, Font = font, FontSize = size, PixelSize = Pixel, Modulate = color, OutlineSize = 0, Shaded = false,
         DoubleSided = true, AlphaCut = Label3D.AlphaCutMode.OpaquePrepass, VerticalAlignment = VerticalAlignment.Bottom,
         CastShadow = GeometryInstance3D.ShadowCastingSetting.On,
-        Offset = new Vector2(0, -font.GetDescent(size)), Position = position,
+        Offset = new Vector2(0, -font.GetDescent(size)), Position = flat ? position + Vector3.Up * Lift : position,
         RotationDegrees = flat ? new Vector3(-90, 0, 0) : Vector3.Zero,
     });
 

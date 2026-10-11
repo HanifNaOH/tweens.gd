@@ -26,6 +26,8 @@ dotnet publish testbed/testbed.web   # browser build in testbed/testbed.web/AppB
 | `--snapshot <file>` | Save a PNG after 20 frames, then quit |
 | `--gallery-snapshots <dir>` | Save a PNG of every page, then quit |
 | `--restart-check` | After the gallery quits, start a second engine in the same process |
+| `--gallery-duration <s>` | Start with this leg duration in seconds |
+| `--gallery-record <n>` | Record example `n` of the page into `temp/` with Movie Maker, then quit |
 
 Other arguments go to Godot, such as `--headless`, `--quit-after 12`, `--rendering-method gl_compatibility` or
 `--fixed-fps 60`. Snapshots and the Shaders page need a renderer; headless, the Shaders page shows a notice instead.
@@ -37,11 +39,17 @@ dotnet run --project testbed/testbed.2dog -- --gallery-snapshots artifacts/galle
 
 ## Use
 
-- The header holds the language switch (**C# · Beta**, **GDScript · Beta**) and the leg duration (0.4–4 s, default
+- The window opens at 1600×900. With every control in the sidebar, the examples get the window's full height.
+- The sidebar holds the language switch (**C# · Beta**, **GDScript · Beta**) and the leg duration (0.4–4 s, default
   1.8 s). Changing either restarts the page from its initial state; the page and the open example stay selected.
 - The sidebar selects a page, and **Restart page** rebuilds it. A page shows its examples as cards.
 - **View C#** or **View GDScript** opens a card's source beside its preview without restarting it. The file menu also
   shows the scene and helper files, and the toolbar copies the file, jumps to the tween code and toggles wrapping.
+- **Fullscreen** shows only that example, scaled up uniformly until its card's layout fits the screen and rendered at
+  screen resolution, and makes the window fullscreen without restarting it. **Exit fullscreen** or Esc returns.
+- **Record** (desktop host only) restarts the gallery in Godot's Movie Maker mode and records that example, filling a
+  1920×1080 window, into `temp/` as an AVI at 60 fps. Every frame advances exactly 1/60 s however long it takes to
+  render. The showreel records one loop and other examples 10 s; Esc stops early. The gallery then reopens.
 - The Easing page composes an In and an Out curve with skew, blend method and join width; None leaves a single curve.
   Amber and blue are the two halves, mint is the result.
 - The Colors page compares sRGB, linear RGB and OKLab, each with straight and premultiplied alpha. Press **50%**

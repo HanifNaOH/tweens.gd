@@ -5,6 +5,6 @@ namespace testbed;
 public partial class ShowreelPage : GalleryPage
 {
     public override string Heading => "Showreel";
-    public override string Description => "Keyframe definitions on one loop: camera moves, title cards, punches and flying 3D objects.";
+    public override string Description => "A dot crosses a page of words; each stands up with the easing it names.";
     protected override GalleryEffect[] CreateEffects() => [new Showreel()];
 }

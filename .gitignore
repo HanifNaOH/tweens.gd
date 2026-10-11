@@ -6,6 +6,8 @@ benchmarks/reports/
 unity-tweens/
 plans/
 artifacts/
+# Testbed recordings
+temp/
 # Keep historical internal docs local; publish only the authoritative release guide.
 /docs-internal/*
 !/docs-internal/RELEASING.md

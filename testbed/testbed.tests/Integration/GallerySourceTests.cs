@@ -82,6 +82,49 @@ public class GallerySourceTests(HeadlessFixture godot)
     }
 
     [Fact]
+    public void FullscreenShowsOnlyThePlayingExampleUntilEscapeWithoutRestartingIt()
+    {
+        var gallery = new Gallery();
+        godot.Tree.Root.AddChild(gallery);
+        gallery.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        Pump();
+        try
+        {
+            var page = gallery.CurrentPage!;
+            var sequence = page.SequenceTask;
+            var fullscreen = Descendants(page).OfType<Button>().Where(b => b.Text == "Fullscreen").ToArray();
+            Assert.Equal(page.Effects.Count, fullscreen.Length);
+            // Only a host that can restart into Movie Maker shows Record buttons.
+            Assert.DoesNotContain(Descendants(page).OfType<Button>(), b => b.Text == "Record" && b.Visible);
+            fullscreen[1].EmitSignal(BaseButton.SignalName.Pressed);
+            Pump();
+            Assert.True(gallery.IsFullscreen);
+            Assert.Equal(1, page.SoloEffect);
+            Assert.Same(sequence, page.SequenceTask);
+            Assert.Single(Stages(gallery));
+            Assert.Equal("Exit fullscreen", Assert.Single(Descendants(gallery).OfType<Button>(), b => b.IsVisibleInTree()).Text);
+
+            // A restart rebuilds the page and keeps the same example filling the window.
+            gallery.RestartPage(); Pump();
+            Assert.Equal(1, gallery.CurrentPage!.SoloEffect);
+            Assert.Single(Stages(gallery));
+
+            gallery.GetViewport().PushInput(new InputEventAction { Action = "ui_cancel", Pressed = true });
+            Pump();
+            Assert.False(gallery.IsFullscreen);
+            Assert.Equal(-1, gallery.CurrentPage!.SoloEffect);
+            Assert.Equal(gallery.CurrentPage.Effects.Count, Stages(gallery).Count());
+            Assert.All(Descendants(gallery.CurrentPage).OfType<Button>().Where(b => b.Text == "Fullscreen"), b => Assert.True(b.IsVisibleInTree()));
+        }
+        finally { gallery.Free(); }
+        Pump();
+        Assert.Empty(godot.Errors.Drain());
+    }
+
+    private static IEnumerable<Control> Stages(Node gallery) =>
+        Descendants(gallery).OfType<Control>().Where(c => c.Name == "PreviewStage" && c.IsVisibleInTree());
+
+    [Fact]
     public void HelpersAndSourceSelectionSurviveRestartAndDisposeWithThePage()
     {
         var gallery = new Gallery();

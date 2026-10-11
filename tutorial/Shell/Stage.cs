@@ -59,7 +59,7 @@ public partial class Stage : PanelContainer
     private void OpenScene()
     {
         if (Lesson is not null && EngineDebugger.IsActive())
-            EngineDebugger.SendMessage("tutorial:open_scene", new Godot.Collections.Array { Lesson.SceneFilePath });
+            EditorBridge.OpenScene(Lesson.SceneFilePath);
     }
 
     private void Fit()

@@ -58,10 +58,10 @@ gdscript/warnings/function_used_as_property=2
 
 [display]
 
-window/size/viewport_width=1440
-window/size/viewport_height=720
-window/size/window_width_override=1440
-window/size/window_height_override=720
+window/size/viewport_width=1600
+window/size/viewport_height=900
+window/size/viewport_width.movie=1920
+window/size/viewport_height.movie=1080
 window/vsync/vsync_mode=3
 window/size/min_width=1200
 window/size/min_height=640
@@ -73,3 +73,7 @@ project/assembly_name="testbed"
 [rendering]
 
 anti_aliasing/quality/msaa_3d=2
+
+[editor]
+
+movie_writer/mjpeg_quality=0.95

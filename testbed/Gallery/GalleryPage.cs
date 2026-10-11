@@ -14,12 +14,16 @@ public abstract partial class GalleryPage : VBoxContainer
     private readonly List<Resource> resources = [];
     private GalleryEffect[] effects = [];
     private readonly List<PanelContainer> cards = [];
-    private readonly List<Button> sourceButtons = [];
+    private readonly List<StyleBox> cardBoxes = [], stageBoxes = [];
+    private readonly List<Control> headers = [], captions = [];
+    private readonly List<Button> exitButtons = [];
     private GridContainer grid = null!;
+    private HBoxContainer heading = null!;
     private HBoxContainer sourceNavigation = null!;
     private OptionButton examplePicker = null!;
     private GallerySourceView sourceView = null!;
     private Label description = null!;
+    private StyleBox soloCard = null!, soloStage = null!;
     private readonly List<Control> frames = [];
 
     public GalleryLanguage Language { get; set; }
@@ -27,6 +31,17 @@ public abstract partial class GalleryPage : VBoxContainer
 
     public int SelectedEffect { get; private set; } = -1;
     public GallerySourceView SourceView => sourceView;
+
+    /// <summary>The example filling the page, or -1.</summary>
+    public int SoloEffect { get; private set; } = -1;
+    /// <summary>The card stage size that the example filling the page magnifies.</summary>
+    public Vector2 SoloSize { get; private set; }
+    /// <summary>A card asks to fill the window with its example.</summary>
+    public event Action<int>? FullscreenRequested;
+    /// <summary>The example filling the window asks to return to the gallery.</summary>
+    public event Action? FullscreenExitRequested;
+    /// <summary>A card asks to record its example.</summary>
+    public event Action<int>? RecordRequested;
 
     public abstract string Heading { get; }
     public abstract string Description { get; }
@@ -37,7 +52,7 @@ public abstract partial class GalleryPage : VBoxContainer
     public override void _Ready()
     {
         AddThemeConstantOverride("separation", 10);
-        var heading = this.Add(new HBoxContainer());
+        heading = this.Add(new HBoxContainer());
         heading.AddThemeConstantOverride("separation", 16);
         heading.AddChild(GalleryTheme.Label(Heading, 24));
         description = heading.Add(GalleryTheme.Label(Description, 14, Palette.Muted));
@@ -59,6 +74,8 @@ public abstract partial class GalleryPage : VBoxContainer
         grid.AddThemeConstantOverride("v_separation", 14);
         split.AddChild(grid);
 
+        soloCard = Own(new StyleBoxEmpty());
+        soloStage = Own(GalleryTheme.Box(Palette.Stage, 0, 0, null, 0, 0));
         effects = CreateEffects();
         grid.Columns = effects.Length == 1 ? 1 : 2;
         for (var i = 0; i < effects.Length; i++)
@@ -71,6 +88,7 @@ public abstract partial class GalleryPage : VBoxContainer
     public void ShowSource(int index)
     {
         if (index < 0 || index >= effects.Length) throw new ArgumentOutOfRangeException(nameof(index));
+        LeaveSolo();
         SelectedEffect = index;
         sourceNavigation.Show();
         description.Hide();
@@ -81,7 +99,7 @@ public abstract partial class GalleryPage : VBoxContainer
         for (var i = 0; i < cards.Count; i++)
         {
             cards[i].Visible = i == index;
-            sourceButtons[i].Visible = false;
+            headers[i].GetChild<Control>(1).Visible = false;
             FitPreview(frames[i]);
         }
         sourceView.ShowEffect(effects[index], Language);
@@ -89,6 +107,7 @@ public abstract partial class GalleryPage : VBoxContainer
 
     public void ShowGallery()
     {
+        LeaveSolo();
         SelectedEffect = -1;
         sourceNavigation.Hide();
         description.Show();
@@ -96,8 +115,43 @@ public abstract partial class GalleryPage : VBoxContainer
         grid.Columns = effects.Length == 1 ? 1 : 2;
         grid.SizeFlagsVertical = SizeFlags.ExpandFill;
         foreach (var card in cards) card.Show();
-        foreach (var button in sourceButtons) button.Show();
+        foreach (var header in headers) header.GetChild<Control>(1).Show();
         foreach (var frame in frames) FitPreview(frame);
+    }
+
+    /// <summary>Shows only one example, magnified to fill the page; it keeps playing. Without a
+    /// <paramref name="size"/>, the card's current stage size is the layout that it magnifies. Recordings hide the
+    /// exit button, so it stays out of the movie.</summary>
+    public void ShowSolo(int index, Vector2 size = default, bool exitButton = true)
+    {
+        if (index < 0 || index >= effects.Length) throw new ArgumentOutOfRangeException(nameof(index));
+        if (SelectedEffect >= 0) ShowGallery();
+        LeaveSolo();
+        SoloSize = size == default ? frames[index].GetChild<Control>(0).Size : size;
+        SoloEffect = index;
+        heading.Hide();
+        grid.Columns = 1;
+        for (var i = 0; i < cards.Count; i++) cards[i].Visible = i == index;
+        headers[index].Hide();
+        captions[index].Hide();
+        exitButtons[index].Visible = exitButton;
+        cards[index].AddThemeStyleboxOverride("panel", soloCard);
+        frames[index].GetChild<Control>(0).AddThemeStyleboxOverride("panel", soloStage);
+        FitPreview(frames[index]);
+    }
+
+    private void LeaveSolo()
+    {
+        if (SoloEffect < 0) return;
+        var index = SoloEffect;
+        SoloEffect = -1;
+        heading.Show();
+        headers[index].Show();
+        captions[index].Show();
+        exitButtons[index].Hide();
+        cards[index].AddThemeStyleboxOverride("panel", cardBoxes[index]);
+        frames[index].GetChild<Control>(0).AddThemeStyleboxOverride("panel", stageBoxes[index]);
+        FitPreview(frames[index]);
     }
 
     public void Start(double seconds)
@@ -123,19 +177,27 @@ public abstract partial class GalleryPage : VBoxContainer
         {
             SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill,
         });
-        panel.AddThemeStyleboxOverride("panel", Own(GalleryTheme.Box(Palette.Surface, 12, 1, null, 12, 10)));
+        cardBoxes.Add(Own(GalleryTheme.Box(Palette.Surface, 12, 1, null, 12, 10)));
+        panel.AddThemeStyleboxOverride("panel", cardBoxes[^1]);
         cards.Add(panel);
 
         var column = panel.Add(new VBoxContainer());
         column.AddThemeConstantOverride("separation", 8);
         var header = column.Add(new HBoxContainer());
+        headers.Add(header);
         var label = header.Add(GalleryTheme.Label(title, 19));
         label.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         label.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-        var source = header.Add(new Button { Text = Language == GalleryLanguage.CSharp ? "View C#" : "View GDScript", TooltipText = "Read the actual source beside this animation" });
+        var tools = header.Add(new HBoxContainer());
+        var record = tools.Add(new Button { Text = "Record", Visible = Gallery.CanRecord, TooltipText = $"Record this example to temp/ at {Gallery.RecordingFps} fps; Esc stops" });
+        record.AddThemeFontSizeOverride("font_size", 13);
+        record.Pressed += () => RecordRequested?.Invoke(index);
+        var fullscreen = tools.Add(new Button { Text = "Fullscreen", TooltipText = "Show only this example; Esc returns" });
+        fullscreen.AddThemeFontSizeOverride("font_size", 13);
+        fullscreen.Pressed += () => FullscreenRequested?.Invoke(index);
+        var source = tools.Add(new Button { Text = Language == GalleryLanguage.CSharp ? "View C#" : "View GDScript", TooltipText = "Read the actual source beside this animation" });
         source.AddThemeFontSizeOverride("font_size", 13);
         source.Pressed += () => ShowSource(index);
-        sourceButtons.Add(source);
 
         // Drawn clipping keeps viewports inside the rounded inset.
         var frame = column.Add(new Control
@@ -150,9 +212,19 @@ public abstract partial class GalleryPage : VBoxContainer
             ClipChildren = ClipChildrenMode.AndDraw, MouseFilter = MouseFilterEnum.Ignore,
         });
         frame.Resized += () => FitPreview(frame);
-        stage.AddThemeStyleboxOverride("panel", Own(GalleryTheme.Box(Palette.Stage, 8)));
+        stageBoxes.Add(Own(GalleryTheme.Box(Palette.Stage, 8)));
+        stage.AddThemeStyleboxOverride("panel", stageBoxes[^1]);
+        // Drawn over the stage while the example fills the window.
+        var exit = frame.Add(new Button { Text = "Exit fullscreen", TooltipText = "Esc", Visible = false, Modulate = new Color(1, 1, 1, 0.5f) });
+        exit.AddThemeFontSizeOverride("font_size", 13);
+        exit.SetAnchorsAndOffsetsPreset(LayoutPreset.TopRight, LayoutPresetMode.KeepSize, 32);
+        exit.GrowHorizontal = GrowDirection.Begin;
+        exit.Pressed += () => FullscreenExitRequested?.Invoke();
+        exitButtons.Add(exit);
 
-        column.Add(GalleryTheme.Label(caption, 13, Palette.Muted)).AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        var note = column.Add(GalleryTheme.Label(caption, 13, Palette.Muted));
+        note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        captions.Add(note);
         return stage;
     }
 
@@ -168,12 +240,52 @@ public abstract partial class GalleryPage : VBoxContainer
         // minimum size depend on the previous window size.
         var stage = frame.GetChild<Control>(0);
         var size = frame.Size;
+        var magnification = 1f;
         if (SelectedEffect >= 0)
         {
             var width = Math.Min(size.X, size.Y * 2);
             size = new Vector2(width, width / 2);
         }
+        else if (SoloEffect >= 0 && frames[SoloEffect] == frame && SoloSize.X > 0 && SoloSize.Y > 0)
+        {
+            // Scaled up uniformly until the card's layout fits; the stage extends to the page's edges around it.
+            magnification = Math.Min(size.X / SoloSize.X, size.Y / SoloSize.Y);
+            size /= magnification;
+        }
         stage.Size = size;
-        stage.Position = (frame.Size - size) / 2;
+        stage.Scale = Vector2.One * magnification;
+        stage.Position = (frame.Size - size * magnification) / 2;
+        Magnify(stage, magnification);
+    }
+
+    /// <summary>Renders the stage's viewports at the magnified resolution: each one renders the magnification times its
+    /// layout size and draws counter-scaled, while 2D content keeps that layout. Gallery viewports are anchored to the
+    /// stage; a viewport inside a layout container keeps stretching.</summary>
+    private static void Magnify(Control stage, float magnification)
+    {
+        foreach (var container in Descendants(stage).OfType<SubViewportContainer>())
+        {
+            if (container.GetChildren().OfType<SubViewport>().FirstOrDefault() is not { } view) continue;
+            if (container.GetParentControl() is not { } parent || parent is Container) continue;
+            var magnified = magnification != 1;
+            if (!magnified && container.Stretch) continue;
+            // Unstretched, a container's size follows its viewport, so the layout comes from its anchors and offsets.
+            var layout = parent.Size * new Vector2(container.AnchorRight - container.AnchorLeft, container.AnchorBottom - container.AnchorTop)
+                + new Vector2(container.OffsetRight - container.OffsetLeft, container.OffsetBottom - container.OffsetTop);
+            container.Stretch = !magnified;
+            container.Scale = Vector2.One / magnification;
+            view.Size2DOverrideStretch = magnified && !view.OwnWorld3D;
+            view.Size2DOverride = magnified && !view.OwnWorld3D ? (Vector2I)layout.Round() : Vector2I.Zero;
+            if (magnified) view.Size = (Vector2I)(layout * magnification).Round();
+        }
+    }
+
+    private static IEnumerable<Node> Descendants(Node node)
+    {
+        foreach (var child in node.GetChildren())
+        {
+            yield return child;
+            foreach (var nested in Descendants(child)) yield return nested;
+        }
     }
 }
