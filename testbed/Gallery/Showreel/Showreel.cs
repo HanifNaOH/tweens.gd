@@ -30,7 +30,7 @@ public sealed partial class Showreel : GalleryEffect
     private Camera3D camera = null!;
     private Node3D dot = null!;
     private Sprite3D disc = null!, godot = null!;
-    private MeshInstance3D rim = null!;
+    private Sprite3D rim = null!;
     private GpuParticles3D trail = null!, dust = null!, confetti = null!;
     private MeshInstance3D[] ripples = [], ticks = [];
     private Label3D[] from = [], to = [], ease = [], bounce = [], elastic = [], keyframes = [], diamonds = [], logo = [];
@@ -121,20 +121,20 @@ public sealed partial class Showreel : GalleryEffect
         }
         glosses = [
             Define(stations[0], new Vector3(-2.4f, 0, 0.8f), 4.6f,
-                "tweens, n. An intermediate frame drawn between two keyframes to create smooth, continuous motion in animation.",
-                "fun, juice, polish"),
+                "tween, n. software-calculated frame that interpolates changes in spatial coordinates, scale, rotation, or opacity between two keyframe markers across a timeline.",
+                "when you need a coat but no hat"),
             Define(stations[1], new Vector3(3.5f, 0, 0.8f), 5,
-                "easing, n. A mathematical curve or function that controls the rate of acceleration or deceleration of an animation between keyframes to produce natural, organic motion.",
-                "pleasant, easy"),
+                "easing, v. process of modifying a graph curve, to modulate velocity over time, transforming a constant-rate tween into a non-linear motion curve.",
+                "into a soft, warm sofa"),
             Define(stations[2], new Vector3(8.7f, 0, 0.95f), 4.6f,
-                "bounce, v. To spring back after striking a surface, a little lower each time.",
-                "to leave the party"),
+                "bounce, n. swift, rebound trajectory resulting from an kinetic object colliding with a rigid surface, governed by the surface and object's combined coefficient of restitution.",
+                "at times in our step"),
             Define(stations[3], new Vector3(13.6f, 0, 0.85f), 5,
-                "elastic, a. Describing an easing function or motion that overshoots its target value and oscillates before coming to rest, mimicking the springy recoil of stretched rubber.",
+                "elastic, a. describing an easing function or motion that overshoots its target value and oscillates before coming to rest, mimicking the springy recoil of stretched rubber.",
                 "something that ferrets are"),
             Define(stations[4], new Vector3(19.4f, 0, 0.9f), 4.6f,
-                "keyframes, n. The values an animator sets at chosen moments; everything in between is interpolated.",
-                "frames, but important"),
+                "keyframes, n. precise temporal marker placed along a software timeline to lock specific transformation parameters, serving as mathematical anchors between which interpolation occurs.",
+                "the moments we remember"),
         ];
 
         // A ruler at the positions an InOut.Cubic tween passes at equal time steps: an animator's spacing chart.
@@ -179,20 +179,15 @@ public sealed partial class Showreel : GalleryEffect
         disc = dot.Add(new Sprite3D
         {
             Texture = Circle(), PixelSize = 2 * Radius / 128, Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
-            Shaded = false, AlphaCut = SpriteBase3D.AlphaCutMode.OpaquePrepass, Modulate = Ember, Position = new Vector3(0, 3.2f, 0),
+            Shaded = false, AlphaCut = SpriteBase3D.AlphaCutMode.OpaquePrepass, Modulate = TweensBlue, Position = new Vector3(0, 3.2f, 0),
         });
-        // A white ball around the disc that draws only its back faces: they lie behind the disc, which covers all but a rim.
-        // It sits 4 cm behind the disc; at the period, that is 1 cm behind the letters, which then cover its edge.
-        rim = disc.Add(new MeshInstance3D
+        // A white disc behind the disc, which covers all of it but a rim once it grows. It sits 4 cm behind the disc; at
+        // the period, that is 1 cm behind the letters, which then cover its edge. A sprite takes on its parent sprite's
+        // modulate, so a plain node holds it.
+        rim = disc.Add(new Node3D { Position = new Vector3(0, 0, -0.04f) }).Add(new Sprite3D
         {
-            Position = new Vector3(0, 0, -0.04f),
-            Mesh = Own(new SphereMesh { Radius = Radius, Height = 2 * Radius, RadialSegments = 64, Rings = 32 }),
-            MaterialOverride = Own(new StandardMaterial3D
-            {
-                AlbedoColor = Colors.White, ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-                CullMode = BaseMaterial3D.CullModeEnum.Front,
-            }),
-            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            Texture = disc.Texture, PixelSize = disc.PixelSize, Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, Shaded = false,
+            AlphaCut = SpriteBase3D.AlphaCutMode.OpaquePrepass, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         });
 
         // Lays one ink dot at a steady rate, so the trail doubles as a spacing chart: dense where the dot was slow.
@@ -345,8 +340,8 @@ public sealed partial class Showreel : GalleryEffect
                 periodScale = (radii / Radius) with { Z = 1 };
                 // Label3D draws MSDF outlines in MSDF texels, of which the font has msdf_size per em.
                 var outline = (float)outlineSize / ((FontFile)display).MsdfSize * em;
-                // Flat in the letters' plane, the rim fits between their fills and their shades as their outlines do.
-                rimScale = ((radii + Vector3.One * outline) / radii) with { Z = 0.006f / Radius };
+                // Between the letters' fills and their shades, the rim shows as their outlines do.
+                rimScale = ((radii + Vector3.One * outline) / radii) with { Z = 1 };
                 continue;
             }
             var glyph = logo[letter++] = Text(parent, wordmark[i].ToString(), display, size, i < 6 ? TweensBlue : GdGreen, position, flat: false);

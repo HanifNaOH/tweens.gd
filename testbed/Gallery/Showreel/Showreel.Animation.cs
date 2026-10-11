@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Moritz Voss
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,47 +17,121 @@ public sealed partial class Showreel
 {
     private async Task AnimateAsync()
     {
+        // Scenes share the loop's clock, so their lead-ins and exits can overlap. Start them together;
+        // awaiting one scene before starting the next would wait for its infinite loop to end.
+        // Edit a cue's at value to move its lettering, definition and punch line together.
+        // Camera, dot and landing effects are choreographed separately in JourneyAsync.
+        await Task.WhenAll(
+            JourneyAsync(),
+            OpeningCreditAsync(at: Bars(0)),
+            FromToAsync(at: Bars(2)),
+            EaseAsync(at: Tick(0)),
+            BounceAsync(at: 21.98),
+            ElasticAsync(at: 31.855),
+            KeyframesAsync(at: Waypoint(0)),
+            WordmarkAsync(at: Bars(15) - Eighth),
+            ClosingAsync(at: Bars(16) + 2 * Beat));
+    }
+
+    /// <summary>The camera, travelling dot and landing effects run across scene boundaries.</summary>
+    private async Task JourneyAsync()
+    {
         // The trail keeps each dot it lays for exactly one loop.
         trail.Lifetime = Length * Tempo;
         var route = Route();
-        var plays = new List<Group>
-        {
-            rig.Tween(Rig()), camera.Tween(Lens()), fade.Tween(Fade()),
-            // One definition moves both the dot and the emitter that lays its trail.
-            dot.Tween(route), trail.Tween(route), trail.Tween(Lay()),
-            disc.Tween(Disc()), rim.Tween(Rim()), dust.Tween(Dust()), confetti.Tween(Burst()),
-            godot.Tween(Float(godot, 0, credit.Length, Bars(0) + Eighth)), subtitle.Tween(Timeline(Standing(49.48, Out.Back))),
-        };
-        plays.AddRange(credit.Select((letter, i) => letter.Tween(Float(letter, i, i, Bars(0)))));
-        for (var g = 0; g < glosses.Length; g++)
-        {
-            var (words, extra) = glosses[g];
-            var at = Glossary[g];
-            plays.AddRange(words.Select((word, i) => word.Tween(Printed(word, i, at))));
-            plays.AddRange(extra.Select((word, j) => word.Tween(Extra(word, j, at))));
-        }
-        // Each word stands up with the easing it names.
-        plays.AddRange(from.Select((letter, i) => letter.Tween(Timeline(Standing(Bars(2) + 0.08 * i, Out.Back)))));
-        plays.AddRange(to.Select((letter, i) => letter.Tween(Timeline(Standing(Bars(3) + Eighth + 0.08 * i, Out.Back)))));
-        plays.AddRange(ticks.Select((tick, i) => tick.Tween(Timeline(Standing(Tick(i), Out.Back, 0.35)))));
-        plays.AddRange(ease.Select((letter, i) => letter.Tween(Timeline(Standing(14.23 + Beat * i, InOut.Cubic, 0.9)))));
-        plays.AddRange(bounce.Select((letter, i) => letter.Tween(Bounce(i))));
-        plays.AddRange(elastic.Select((letter, i) => letter.Tween(Elastic(i))));
-        plays.AddRange(diamonds.Select((diamond, i) => diamond.Tween(Diamond(i))));
-        plays.AddRange(keyframes.Select((letter, i) => letter.Tween(Timeline(Standing(Waypoint(i) + 0.1, Out.Back, 0.4)))));
-        plays.AddRange(logo.Select((letter, i) => letter.Tween(Drop(i))));
-        plays.AddRange(taglines.Select((line, i) => line.Tween(Timeline(Standing(52.355 + Eighth * i, Out.Back)))));
-        plays.AddRange(ripples.Select((ripple, i) => ripple.Tween(Ripple(i))));
-        await Task.WhenAll(plays.Select(play => play.End));
+        await Task.WhenAll(
+            PlayAsync(
+                rig.Tween(Rig()), camera.Tween(Lens()), fade.Tween(Fade()),
+                // One definition moves both the dot and the emitter that lays its trail.
+                dot.Tween(route), trail.Tween(route), trail.Tween(Lay()),
+                disc.Tween(Disc()), rim.Tween(Rim()), dust.Tween(Dust())),
+            PlayAsync(ripples.Select((ripple, i) => ripple.Tween(Ripple(i)))));
     }
+
+    private async Task OpeningCreditAsync(double at)
+    {
+        var shift = at - Bars(0);
+        await Task.WhenAll(
+            PlayAsync(godot.Tween(Float(godot, 0, credit.Length, Bars(0) + Eighth, shift))),
+            PlayAsync(credit.Select((letter, i) => letter.Tween(Float(letter, i, i, Bars(0), shift)))));
+    }
+
+    private async Task FromToAsync(double at)
+    {
+        var shift = at - Bars(2);
+        await Task.WhenAll(
+            DefinitionAsync(0, shift),
+            PlayAsync(from.Select((letter, i) => letter.Tween(Timeline(Standing(Bars(2) + 0.08 * i, Out.Back), shift)))),
+            PlayAsync(to.Select((letter, i) => letter.Tween(Timeline(Standing(Bars(3) + Eighth + 0.08 * i, Out.Back), shift)))));
+    }
+
+    private async Task EaseAsync(double at)
+    {
+        var shift = at - Tick(0);
+        await Task.WhenAll(
+            DefinitionAsync(1, shift),
+            PlayAsync(ticks.Select((tick, i) => tick.Tween(Timeline(Standing(Tick(i), Out.Back, 0.35), shift)))),
+            PlayAsync(ease.Select((letter, i) => letter.Tween(Timeline(Standing(Tick(i + 1), InOut.Cubic, 0.9), shift)))));
+    }
+
+    private async Task BounceAsync(double at)
+    {
+        var shift = at - 21.98;
+        await Task.WhenAll(DefinitionAsync(2, shift), PlayAsync(bounce.Select((letter, i) => letter.Tween(Bounce(i, shift)))));
+    }
+
+    private async Task ElasticAsync(double at)
+    {
+        var shift = at - 31.855;
+        await Task.WhenAll(DefinitionAsync(3, shift), PlayAsync(elastic.Select((letter, i) => letter.Tween(Elastic(i, shift)))));
+    }
+
+    private async Task KeyframesAsync(double at)
+    {
+        var shift = at - Waypoint(0);
+        await Task.WhenAll(
+            DefinitionAsync(4, shift),
+            PlayAsync(diamonds.Select((diamond, i) => diamond.Tween(Diamond(i, shift)))),
+            PlayAsync(keyframes.Select((letter, i) => letter.Tween(Timeline(Standing(Waypoint(i) + 0.1, Out.Back, 0.4), shift)))));
+    }
+
+    private async Task WordmarkAsync(double at)
+    {
+        var shift = at - (Bars(15) - Eighth);
+        await Task.WhenAll(
+            PlayAsync(logo.Select((letter, i) => letter.Tween(Drop(i, shift)))),
+            PlayAsync(confetti.Tween(Burst(shift)), subtitle.Tween(Timeline(Standing(49.48, Out.Back), shift))));
+    }
+
+    private async Task ClosingAsync(double at) => await PlayAsync(
+        taglines.Select((line, i) => line.Tween(Timeline(Standing(Bars(16) + 2 * Beat + Eighth * i, Out.Back), at - (Bars(16) + 2 * Beat)))));
+
+    /// <summary>Print a definition, shorten it to a punch line, then blow it away.</summary>
+    private async Task DefinitionAsync(int station, double shift)
+    {
+        var (words, extra) = glosses[station];
+        var at = Glossary[station];
+        await Task.WhenAll(
+            PlayAsync(words.Select((word, i) => word.Tween(Printed(word, i, at, shift)))),
+            PlayAsync(extra.Select((word, j) => word.Tween(Extra(word, j, at, shift)))));
+    }
+
+    private static Task PlayAsync(params Group[] plays) => PlayAsync((IEnumerable<Group>)plays);
+
+    private static async Task PlayAsync(IEnumerable<Group> plays) => await Task.WhenAll(plays.Select(play => play.End));
 
     private const double Length = 55;
 
     /// <summary>Converts seconds on the loop to a percentage stop.</summary>
     private static Percent T(double seconds) => Percent.Of(seconds / Length * 100);
 
-    private Tweens.Keyframes Timeline(List<Key> keys) => new([.. keys],
-        options: new TweenOptions { Duration = Length * Tempo, Repeats = TweenOptions.Infinite });
+    // A cue shifts the whole scene. Delay moves it later; offset starts it further into its first loop.
+    private Tweens.Keyframes Timeline(List<Key> keys, double shift = 0) => new([.. keys],
+        options: new TweenOptions
+        {
+            Duration = Length * Tempo, Repeats = TweenOptions.Infinite,
+            Delay = Math.Max(0, shift) * Tempo, Offset = Math.Max(0, -shift) * Tempo, Fill = FillMode.Both,
+        });
 
     // The track's grid: 80 bpm in 4/4, its first downbeat at 1.105 s.
     private const double Beat = 0.75, Eighth = Beat / 2;
@@ -64,18 +139,18 @@ public sealed partial class Showreel
     private static double Bars(int bars) => 1.105 + 4 * Beat * bars;
 
     // When the dot reaches each ruler tick, BOUNCE letter, ELASTIC letter and keyframe diamond.
-    private static double Tick(int i) => Bars(4) + Eighth + Beat * i;
+    private static double Tick(int i) => Bars(4) + 3 * Eighth + Beat * i;
     // The hops land 0.6 s after the bar; the hop from U to N is half as long, for the track's double bass drum hit.
     private static double Landing(int i) => Bars(8) + 0.6 + Beat * i - (i > 2 ? Eighth : 0);
     private static readonly double Takeoff = Landing(0) - Beat;
     private static double Stretch(int i) => Bars(10) + 3 * Beat + Eighth * i;
-    private static double Waypoint(int i) => Bars(12) + Beat * i;
+    private static double Waypoint(int i) => Bars(12) + 3 * Eighth + Beat * i;
 
     /// <summary>When a definition is printed, shrinks to its headword, gains new words, and blows away.</summary>
     private readonly record struct Moments(double Print, double Shrink, double Extend, double Blow);
     private static readonly Moments[] Glossary = [
-        new(7.48, 10.855, 11.605, Bars(4)), new(14.6, 17.855, 18.23, 19.855), new(20.605, Landing(5) - Eighth, Landing(5), Bars(10)),
-        new(31.48, Bars(11), 34.48, 36.73), new(38.23, 41.605, 41.98, 43.855),
+        new(7.48, 10.855, 11.605, Bars(4) + Beat), new(15.35, 18.23, 18.605, 21.355),
+        new(21.98, Landing(5) - Eighth, Landing(5), Bars(10) + Beat), new(31.855, 34.48, 34.855, 37.855), new(38.98, 41.98, 42.355, 44.98),
     ];
 
     /// <summary>Keys that stand a printed node up from the page, hinged at its foot.</summary>
@@ -99,50 +174,49 @@ public sealed partial class Showreel
         new(5.2, 0, (-1.9, 0.4, 0.1), (-22, -10, 0), 4.2, InOut.Cubic),
         // FROM, the definition, TO, and the punch line.
         new(6.3, 0, (-2, 0.32, -0.45), (-14, -6, 0), 3),
-        new(7.1, 0, (-2.06, 0.3, -0.6), (-10, -4, 0), 2.4),
-        new(7.7, 0, (-2, 0.3, -0.6), (-10, -3, 0), 2.4),
-        new(8.8, 0, (-0.6, 0.2, 0.2), (-28, -4, 0), 4.6),
-        new(9.4, 0, (-0.4, 0.2, 0.2), (-28, -2, -1), 4.6),
-        new(10.4, 0, (1.2, 0.3, -0.5), (-12, 4, 0), 2.4),
-        new(10.9, 0, (1.2, 0.3, -0.5), (-12, 3, 0), 2.4),
-        new(12, 0, (-0.6, 0, 0.3), (-36, 0, 0), 3.9),
-        new(13.1, 0, (-0.5, 0, 0.3), (-36, 1, 0), 3.9),
+        new(7.1, 0, (-2.06, 0.34, -0.6), (-15, -4, 0), 2.4),
+        new(7.6, 0, (-2, 0.34, -0.6), (-15, -3, 0), 2.4),
+        new(8.9, 0, (-0.3, 0.1, 0.5), (-30, -4, 0), 5),
+        new(9.5, 0, (-0.1, 0.1, 0.5), (-30, -2, 0), 5),
+        new(10.6, 0, (1.1, 0.25, -0.35), (-22, 2, 0), 3.4),
+        new(10.9, 0, (1.15, 0.25, -0.35), (-22, 2, 0), 3.3),
+        new(12.15, 0, (-0.6, 0, 0.3), (-34, 0, 0), 3.9),
+        new(13.75, 0, (-0.45, 0, 0.3), (-34, 1, 0), 3.8),
         // EASE as it stands letter by letter, then one slow pull back to the definition, and the punch line.
-        new(14.2, 1, (4.7, 0.3, -1), (-12, 1, 0), 2.8),
-        new(15.1, 1, (5, 0.3, -1), (-12, 0, 0), 2.8),
-        new(16.5, 1, (5.6, 0, 0.4), (-30, 2, 0), 5),
-        new(17.6, 1, (5.7, 0, 0.4), (-30, 2, 0), 5),
-        new(18.5, 1, (4.8, 0, 0.1), (-34, 0, 0), 3.6),
-        new(19.8, 1, (4.9, 0, 0.1), (-34, 0, 0), 3.6),
+        new(14.95, 1, (4.7, 0.3, -1), (-12, 1, 0), 2.8),
+        new(15.85, 1, (5, 0.3, -1), (-12, 0, 0), 2.8),
+        new(17.25, 1, (5.6, 0, 0.4), (-30, 2, 0), 5),
+        new(18.15, 1, (5.7, 0, 0.4), (-30, 2, 0), 5),
+        new(18.9, 1, (5.1, 0, 0.1), (-34, 0, 0), 4.2),
+        new(21.25, 1, (5.2, 0, 0.1), (-34, 1, 0), 4.05),
         // The BOUNCE definition, BOUNCE from near the ground, and the punch line as the dot leaves.
-        new(20.9, 2, (10.6, 0, 0.6), (-30, 0, 0), 5),
-        new(23.6, 2, (10.7, 0, 0.6), (-30, 0, 0), 5),
-        new(24.9, 2, (10.5, 0.48, 0), (4, -3, 0), 3.5),
+        new(22.35, 2, (10.6, 0, 0.6), (-30, 0, 0), 5),
+        new(24.2, 2, (10.7, 0, 0.6), (-30, 0, 0), 4.8),
+        new(25.4, 2, (10.5, 0.48, 0), (4, -3, 0), 3.5),
         new(Landing(0), 2, (10.5, 0.48, 0), (4, -2.5, 0), 3.5),
         new(Landing(0) + 0.4, 2, (10.5, 0.48, 0), (4, -2, 0), 3.15, Out.Back),
         new(28.5, 2, (10.9, 0.48, 0), (4, 1, 0), 3.3),
-        new(29.6, 2, (10.4, 0, 0.4), (-34, 0, 0), 3.9),
-        new(31, 2, (10.5, 0, 0.4), (-34, 1, 0), 3.9),
+        new(29.6, 2, (10.5, 0, 0.4), (-34, 0, 0), 3.9),
+        new(31.75, 2, (10.65, 0, 0.4), (-34, 1, 0), 3.8),
         // ELASTIC, the definition, and the punch line.
-        new(32, 3, (15.3, 0.3, -0.4), (-12, 0, 0), 3.2),
-        new(32.5, 3, (15.4, 0.3, -0.4), (-12, 0, 0), 3.2),
-        new(33.5, 3, (16.1, 0, 0.5), (-28, 0, 0), 5),
-        new(34.1, 3, (16.2, 0, 0.5), (-28, 0, 0), 5),
-        new(35, 3, (15.6, 0, 0.2), (-34, 0, 0), 3.9),
-        new(36.6, 3, (15.7, 0, 0.2), (-34, 0, 0), 3.9),
+        new(32.75, 3, (15.3, 0.3, -0.4), (-12, 0, 0), 3.2),
+        new(33.15, 3, (15.4, 0.3, -0.4), (-12, 0, 0), 3.2),
+        new(33.95, 3, (16.1, 0, 0.5), (-28, 0, 0), 5),
+        new(34.55, 3, (16.2, 0, 0.5), (-28, 0, 0), 5),
+        new(35.45, 3, (15.6, 0, 0.2), (-34, 0, 0), 3.9),
+        new(37.75, 3, (15.75, 0, 0.2), (-34, 1, 0), 3.8),
         // Along KEYFRAMES as its letters stand, the definition, the punch line, and on to the wordmark.
-        new(37.8, 4, (20, 0.25, -0.2), (-24, -8, 0), 3),
-        new(39.5, 4, (21, 0.25, -0.2), (-24, -2, 0), 3),
-        new(40.5, 4, (21.6, 0, 0.6), (-30, 0, 0), 4.8),
-        new(41.5, 4, (21.7, 0, 0.6), (-30, 1, 0), 4.8),
-        new(42.3, 4, (21.25, 0, 0.3), (-34, 0, 0), 3.9),
-        new(43.7, 4, (21.35, 0, 0.3), (-34, 0, 0), 3.9),
-        new(46.1, 5, (27.6, 0.5, -0.3), (-18, 0, 0), 6),
-        new(49.855, 5, (27.6, 0.5, -0.3), (-18, 0, 0), 6),
-        // Crane back over the journey, then look back at the wordmark.
-        new(51.355, 5, (23, 0.3, -0.4), (-34, 36, 0), 11, InOut.Sine),
-        new(51.6, 5, (23, 0.3, -0.4), (-34, 36, 0), 11),
-        new(53.105, 5, (27.6, 0.25, 0.25), (-16, 0, 0), 5.6, InOut.Cubic),
+        new(38.9, 4, (20, 0.25, -0.2), (-24, -8, 0), 3),
+        new(40.45, 4, (21, 0.25, -0.2), (-24, -2, 0), 3),
+        new(41.15, 4, (21.6, 0, 0.6), (-30, 0, 0), 4.8),
+        new(41.9, 4, (21.7, 0, 0.6), (-30, 1, 0), 4.8),
+        new(42.75, 4, (21.25, 0, 0.3), (-34, 0, 0), 3.9),
+        new(44.85, 4, (21.4, 0, 0.3), (-34, 1, 0), 3.8),
+        new(46.35, 5, (27.6, 0.5, -0.3), (-18, 0, 0), 6.2),
+        new(49.855, 5, (27.6, 0.45, -0.3), (-18, 0, 0), 5.8),
+        // Settle on the wordmark with the subtitle and taglines, and drift in until the loop ends.
+        new(51.6, 5, (27.6, 0.25, 0.25), (-16, 0, 0), 5.6, InOut.Sine),
+        new(54.75, 5, (27.6, 0.25, 0.2), (-16, 0, 0), 5.4),
     ];
 
     private static Vector3 Vector((double X, double Y, double Z) v) => new((float)v.X, (float)v.Y, (float)v.Z);
@@ -165,7 +239,7 @@ public sealed partial class Showreel
 
     /// <summary>A piece of the credit floats up into view from below and keeps drifting up, then floats away like a
     /// released balloon, turning a little.</summary>
-    private Tweens.Keyframes Float(Node3D piece, int i, int n, double at)
+    private Tweens.Keyframes Float(Node3D piece, int i, int n, double at, double shift)
     {
         var (x, y) = (piece.Position.X, piece.Position.Y);
         var rise = at + 0.03 * i;
@@ -178,12 +252,12 @@ public sealed partial class Showreel
             Key.At(T(release), x: x, y: y + 0.25, rotationDegrees: (0, 0, 0), transparency: 0),
             Key.At(T(release + 1.4), x: x + (n % 5 - 2) * 0.3, y: y + 1.25 + n % 3 * 0.35,
                 rotationDegrees: (0, 0, (25 + n * 13 % 40) * turn), transparency: 1, interpolation: Out.Quad),
-        ]);
+        ], shift);
     }
 
     /// <summary>A definition word is printed in turn. The headword and part of speech stay and blow away later; the
     /// rest fade when the definition shrinks.</summary>
-    private Tweens.Keyframes Printed(Label3D word, int i, Moments at)
+    private Tweens.Keyframes Printed(Label3D word, int i, Moments at, double shift)
     {
         var (x, z) = (word.Position.X, word.Position.Z);
         var shown = at.Print + 0.07 * i;
@@ -198,11 +272,11 @@ public sealed partial class Showreel
             var gone = at.Shrink + 0.02 * (i - 2);
             keys.AddRange([Key.At(T(gone), scale: 1, transparency: 0), Key.At(T(gone + 0.35), scale: 0.8, transparency: 1, interpolation: In.Quad)]);
         }
-        return Timeline(keys);
+        return Timeline(keys, shift);
     }
 
     /// <summary>A new word pops in after the headword, one per 8th, then blows away with it.</summary>
-    private Tweens.Keyframes Extra(Label3D word, int j, Moments at)
+    private Tweens.Keyframes Extra(Label3D word, int j, Moments at, double shift)
     {
         var (x, z) = (word.Position.X, word.Position.Z);
         var shown = at.Extend + Eighth * j;
@@ -212,7 +286,7 @@ public sealed partial class Showreel
             Key.At(T(shown + 0.15), transparency: 0), Key.At(T(shown + 0.3), scale: 1, interpolation: Out.Back),
         ];
         Blow(keys, x, z, 2 + j, at.Blow);
-        return Timeline(keys);
+        return Timeline(keys, shift);
     }
 
     /// <summary>Lifts a printed word off the page, and the wind carries it away like an autumn leaf.</summary>
@@ -282,7 +356,7 @@ public sealed partial class Showreel
     {
         var top = cap + Radius;
         List<Key> keys = [
-            Key.At(0, y: 1.6, scale: (0.01, 0.01, 0.01), modulate: Ember), Key.At(T(0.25), scale: (0.01, 0.01, 0.01)),
+            Key.At(0, y: 1.6, scale: (0.01, 0.01, 0.01), modulate: TweensBlue), Key.At(T(0.25), scale: (0.01, 0.01, 0.01)),
             Key.At(T(0.85), scale: (1, 1, 1), interpolation: Out.Back),
             Key.At(T(2.6), y: 1.66), Key.At(T(Bars(1)), y: 1.6),
             Key.At(T(Bars(1) + Eighth), y: Radius, interpolation: In.Quad), Key.At(T(4.67), y: Radius + 0.3, interpolation: Out.Quad),
@@ -290,7 +364,7 @@ public sealed partial class Showreel
             Key.At(T(Landing(5) + Eighth), y: top + 0.5, interpolation: Out.Quad), Key.At(T(Landing(6)), y: Radius, interpolation: In.Quad),
             Key.At(T(Landing(6) + 0.185), y: Radius + 0.3, interpolation: Out.Quad),
             Key.At(T(Landing(6) + Eighth), y: Radius, interpolation: In.Quad),
-            Key.At(T(48.73), y: Radius, scale: (1, 1, 1), modulate: Ember), Key.At(T(49), modulate: GdGreen),
+            Key.At(T(48.73), y: Radius, scale: (1, 1, 1), modulate: TweensBlue), Key.At(T(49), modulate: GdGreen),
             // Becomes the wordmark's period.
             Key.At(T(Bars(16)), y: period.Y, scale: periodScale, interpolation: Out.Back),
         ];
@@ -340,7 +414,7 @@ public sealed partial class Showreel
     ];
 
     /// <summary>BOUNCE stands up with a bounce, and each letter squashes under the landing dot.</summary>
-    private Tweens.Keyframes Bounce(int i)
+    private Tweens.Keyframes Bounce(int i, double shift)
     {
         var keys = Standing(Takeoff + 0.08 * i, Out.Bounce, 0.6);
         var landing = Landing(i);
@@ -348,23 +422,23 @@ public sealed partial class Showreel
             Key.At(0, scale: (1, 1, 1)), Key.At(T(landing), scale: (1, 1, 1)), Key.At(T(landing + 0.06), scale: (1.15, 0.78, 1)),
             Key.At(T(landing + 0.45), scale: (1, 1, 1), interpolation: Out.Back),
         ]);
-        return Timeline(keys);
+        return Timeline(keys, shift);
     }
 
     /// <summary>ELASTIC stands up elastically, and each letter stretches as the dot passes and springs back.</summary>
-    private Tweens.Keyframes Elastic(int i)
+    private Tweens.Keyframes Elastic(int i, double shift)
     {
-        var keys = Standing(Bars(10) + Eighth + 0.06 * i, Out.Elastic, 0.8);
+        var keys = Standing(Bars(10) + 3 * Eighth + 0.06 * i, Out.Elastic, 0.8);
         var pass = Stretch(i);
         keys.AddRange([
             Key.At(0, scale: (1, 1, 1)), Key.At(T(pass), scale: (1, 1, 1)), Key.At(T(pass + 0.1), scale: (1.6, 0.8, 1)),
             Key.At(T(pass + 1), scale: (1, 1, 1), interpolation: Out.Elastic),
         ]);
-        return Timeline(keys);
+        return Timeline(keys, shift);
     }
 
     /// <summary>A keyframe diamond lights up and stands when the dot passes over it.</summary>
-    private Tweens.Keyframes Diamond(int i)
+    private Tweens.Keyframes Diamond(int i, double shift)
     {
         var at = Waypoint(i);
         var keys = Standing(at, Out.Back, 0.4);
@@ -372,19 +446,19 @@ public sealed partial class Showreel
             Key.At(0, scale: 1, modulate: Sand), Key.At(T(at), scale: 1, modulate: Sand), Key.At(T(at + 0.08), scale: 1.6, modulate: Saffron),
             Key.At(T(at + 0.4), scale: 1, interpolation: Out.Back),
         ]);
-        return Timeline(keys);
+        return Timeline(keys, shift);
     }
 
-    /// <summary>A wordmark letter falls onto the page on its 8th and squashes on landing.</summary>
-    private Tweens.Keyframes Drop(int i)
+    /// <summary>A wordmark letter falls onto the page on its 8th, the first on bar 15, and squashes on landing.</summary>
+    private Tweens.Keyframes Drop(int i, double shift)
     {
-        var at = Bars(14) + 3 * Beat + Eighth * i;
+        var at = Bars(15) + Eighth * (i - 1);
         return Timeline([
             Key.At(0, y: 3.5, scale: (0.01, 0.01, 0.01)), Key.At(T(at), y: 3.5, scale: (0.01, 0.01, 0.01)),
             Key.At(T(at + 0.1), scale: (1, 1, 1)),
             Key.At(T(at + Eighth), y: 0, scale: (1, 1, 1), interpolation: In.Quad),
             Key.At(T(at + Eighth + 0.08), scale: (1.18, 0.8, 1)), Key.At(T(at + Eighth + 0.4), scale: (1, 1, 1), interpolation: Out.Back),
-        ]);
+        ], shift);
     }
 
     // Where the dot lands on the page: its drop, the end of BOUNCE, and the period.
@@ -415,8 +489,8 @@ public sealed partial class Showreel
     /// closing fade, a burst of speed ages every dot out.</summary>
     private Tweens.Keyframes Lay() => Timeline([
         Key.At(0, Ratio(0), Speed(1)), Key.At(T(4.46), Ratio(0)), Key.At(T(4.5), Ratio(1)),
-        Key.At(T(45.28), Ratio(1)), Key.At(T(45.3), Ratio(0)),
-        Key.At(0, transparency: 0), Key.At(T(44.5), transparency: 0), Key.At(T(45.3), transparency: 1),
+        Key.At(T(45.655), Ratio(1)), Key.At(T(45.675), Ratio(0)),
+        Key.At(0, transparency: 0), Key.At(T(44.875), transparency: 0), Key.At(T(45.675), transparency: 1),
         Key.At(T(54.76), Speed(1)), Key.At(T(54.78), Speed(400)), Key.At(T(54.99), Speed(400)), Key.At(100, Speed(1)),
     ]);
 
@@ -434,15 +508,15 @@ public sealed partial class Showreel
         }
         Vector3 left = On(5, logo[0].Position), right = On(5, logo[^1].Position);
         keys.AddRange([
-            Key.At(T(45.68), x: left.X, z: left.Z), Key.At(T(45.71), Ratio(0)), Key.At(T(45.73), Ratio(1)),
-            Key.At(T(48.355), x: right.X, z: right.Z, interpolation: Interpolation.Linear),
-            Key.At(T(48.38), Ratio(1)), Key.At(T(48.4), Ratio(0)),
+            Key.At(T(46.055), x: left.X, z: left.Z), Key.At(T(46.085), Ratio(0)), Key.At(T(46.105), Ratio(1)),
+            Key.At(T(48.73), x: right.X, z: right.Z, interpolation: Interpolation.Linear),
+            Key.At(T(48.755), Ratio(1)), Key.At(T(48.775), Ratio(0)),
         ]);
         return Timeline(keys);
     }
 
     /// <summary>Confetti bursts from the wordmark when the dot becomes its period.</summary>
-    private Tweens.Keyframes Burst() => Timeline([
+    private Tweens.Keyframes Burst(double shift) => Timeline([
         Key.At(0, Ratio(0)), Key.At(T(49.13), Ratio(0)), Key.At(T(49.15), Ratio(1)), Key.At(T(49.5), Ratio(1)), Key.At(T(49.53), Ratio(0)),
-    ]);
+    ], shift);
 }
