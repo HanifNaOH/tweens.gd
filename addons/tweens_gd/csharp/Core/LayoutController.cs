@@ -147,19 +147,21 @@ public sealed class LayoutController
                 var snapshot = matched[index];
                 RaiseVisual(snapshot.Item.VisualControl, index, matched.Count);
                 var delay = options.Delay.Seconds + index * options.StaggerEach;
-                var position = snapshot.Item.VisualControl.TweenGlobalPosition(snapshot.FinalPosition, options.Duration,
+                var position = root.TweenFloat(1, options.Duration,
                     tween =>
                     {
-                        tween.From = snapshot.FirstPosition;
+                        tween.From = 0;
                         tween.Delay = delay;
                         tween.Ease = options.Ease;
+                        tween.OnUpdate = (_, progress) => ApplyPositionProgress(snapshot, progress);
                     }, options.Playback);
-                var size = snapshot.Item.VisualControl.TweenSize(snapshot.FinalSize, options.Duration,
+                var size = root.TweenFloat(1, options.Duration,
                     tween =>
                     {
-                        tween.From = snapshot.FirstSize;
+                        tween.From = 0;
                         tween.Delay = delay;
                         tween.Ease = options.SizeEase ?? options.Ease;
+                        tween.OnUpdate = (_, progress) => ApplySizeProgress(snapshot, progress);
                     }, options.Playback);
                 handles.Add(position);
                 handles.Add(size);
@@ -180,6 +182,25 @@ public sealed class LayoutController
             {
                 Settle(snapshots);
                 throw;
+            }
+            if (reason == Reason.Completed)
+            {
+                transition.SetFollowing(true);
+                var finalRectsStable = await FollowLiveRects(tree, transition, snapshots, options.Playback);
+                transition.SetFollowing(false);
+                if (!RootIsLive())
+                {
+                    Settle(snapshots);
+                    transition.Complete(Reason.OwnerExited);
+                    return;
+                }
+                if (transition.IsCancellationRequested)
+                {
+                    Settle(snapshots);
+                    transition.Complete(Reason.Cancelled);
+                    return;
+                }
+                if (!finalRectsStable) throw new InvalidOperationException("The layout transition stopped before its targets settled.");
             }
             Settle(snapshots);
             transition.Complete(reason);
@@ -214,6 +235,40 @@ public sealed class LayoutController
         }
         return false;
     }
+
+    private async Task<bool> FollowLiveRects(SceneTree tree, LayoutTransition transition, Snapshot[] snapshots,
+        PlaybackOptions playback)
+    {
+        var previous = LayoutRects(snapshots);
+        var consecutive = 0;
+        var frameSignal = playback.ProcessMode == TweenProcessMode.Physics
+            ? SceneTree.SignalName.PhysicsFrame : SceneTree.SignalName.ProcessFrame;
+        while (RootIsLive() && !transition.IsCancellationRequested)
+        {
+            await tree.ToSignal(tree, frameSignal);
+            if (!RootIsLive() || transition.IsCancellationRequested) return false;
+            var current = LayoutRects(snapshots);
+            if (transition.IsPaused || !CanFollow(playback))
+            {
+                consecutive = 0;
+                previous = current;
+                continue;
+            }
+            ApplyCurrentRects(snapshots);
+            if (SameRects(current, previous)) consecutive++;
+            else consecutive = 0;
+            previous = current;
+            if (consecutive >= 2) return true;
+        }
+        return false;
+    }
+
+    private bool CanFollow(PlaybackOptions playback) => playback.PauseMode switch
+    {
+        TweenPauseMode.Always => true,
+        TweenPauseMode.SceneTree => !root.GetTree().Paused,
+        _ => root.CanProcess(),
+    };
 
     private bool RootIsLive() => GodotObject.IsInstanceValid(root) && root.IsInsideTree() && !root.IsQueuedForDeletion();
 
@@ -270,6 +325,31 @@ public sealed class LayoutController
         }
     }
 
+    private static void ApplyPositionProgress(Snapshot snapshot, float progress)
+    {
+        if (!snapshot.ItemIsLive) return;
+        var rect = snapshot.Item.LayoutControl.GetGlobalRect();
+        snapshot.Item.VisualControl.GlobalPosition = snapshot.FirstPosition.Lerp(rect.Position, progress);
+    }
+
+    private static void ApplySizeProgress(Snapshot snapshot, float progress)
+    {
+        if (!snapshot.ItemIsLive) return;
+        var rect = snapshot.Item.LayoutControl.GetGlobalRect();
+        snapshot.Item.VisualControl.Size = snapshot.FirstSize.Lerp(rect.Size, progress);
+    }
+
+    private static void ApplyCurrentRects(IEnumerable<Snapshot> snapshots)
+    {
+        foreach (var snapshot in snapshots)
+        {
+            if (!snapshot.ItemIsLive) continue;
+            var rect = snapshot.Item.LayoutControl.GetGlobalRect();
+            snapshot.Item.VisualControl.GlobalPosition = rect.Position;
+            snapshot.Item.VisualControl.Size = rect.Size;
+        }
+    }
+
     private void HoldFirstStateDeferred(LayoutTransition transition, Snapshot[] snapshots)
         => Callable.From(() =>
         {
@@ -291,9 +371,22 @@ public sealed class LayoutController
             var visual = snapshot.Item.VisualControl;
             if (GodotObject.IsInstanceValid(snapshot.Item.LayoutControl) && visual.GetParent() == snapshot.Item.LayoutControl)
             {
-                if (snapshot.HasFinal && visual.IsInsideTree()) visual.GlobalPosition = snapshot.FinalPosition;
-                else if (!visual.IsInsideTree()) visual.Position = Vector2.Zero;
-                if (snapshot.HasFinal) visual.Size = snapshot.FinalSize;
+                if (snapshot.Item.LayoutControl.IsInsideTree())
+                {
+                    var rect = snapshot.Item.LayoutControl.GetGlobalRect();
+                    if (visual.IsInsideTree()) visual.GlobalPosition = rect.Position;
+                    else visual.Position = Vector2.Zero;
+                    visual.Size = rect.Size;
+                    snapshot.FinalPosition = rect.Position;
+                    snapshot.FinalSize = rect.Size;
+                    snapshot.HasFinal = true;
+                }
+                else if (snapshot.HasFinal)
+                {
+                    if (visual.IsInsideTree()) visual.GlobalPosition = snapshot.FinalPosition;
+                    else visual.Position = Vector2.Zero;
+                    visual.Size = snapshot.FinalSize;
+                }
                 visual.Scale = snapshot.OriginalScale;
             }
             visual.ZAsRelative = snapshot.OriginalZAsRelative;

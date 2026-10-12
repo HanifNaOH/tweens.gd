@@ -11,11 +11,12 @@ public sealed class LayoutTransition
     private Group? group;
     private bool paused;
     private bool cancelRequested;
+    private bool following;
 
     public Task<Reason> End => completion.Task;
     public bool IsTerminal => completion.Task.IsCompleted;
-    public bool IsAnimating => group is { IsTerminal: false };
-    public bool IsPaused => group?.IsPaused ?? paused;
+    public bool IsAnimating => group is { IsTerminal: false } || following;
+    public bool IsPaused => group is { IsTerminal: false } ? group.IsPaused : paused;
     public Reason? CompletionReason { get; private set; }
     public Exception? Error { get; private set; }
 
@@ -45,8 +46,14 @@ public sealed class LayoutTransition
     internal void Attach(Group value)
     {
         group = value;
+        following = false;
         if (paused) group.Pause();
         if (cancelRequested) group.Cancel();
+    }
+
+    internal void SetFollowing(bool value)
+    {
+        if (!IsTerminal) following = value;
     }
 
     internal void Complete(Reason reason)
@@ -54,6 +61,7 @@ public sealed class LayoutTransition
         if (IsTerminal) return;
         CompletionReason = reason;
         group = null;
+        following = false;
         completion.TrySetResult(reason);
     }
 
@@ -62,6 +70,7 @@ public sealed class LayoutTransition
         if (IsTerminal) return;
         Error = error;
         group = null;
+        following = false;
         completion.TrySetException(error);
     }
 }

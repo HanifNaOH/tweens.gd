@@ -8,16 +8,22 @@ var error := ""
 var is_terminal: bool:
 	get:
 		return completion_reason != -1
+var is_animating: bool:
+	get:
+		return not is_terminal and (_group != null or _following)
 var is_paused: bool:
 	get:
-		return _group.is_paused if _group != null else _paused
+		return _group.is_paused if _group != null and not _following else _paused
 var end: Variant:
 	get:
-		return ended if completion_reason == -1 else completion_reason
+		if completion_reason == -1:
+			return ended
+		return completion_reason
 
 var _group: TweensGdGroup
 var _paused := false
 var _cancel_requested := false
+var _following := false
 
 static func rejected(message: String) -> TweensGdLayoutHandle:
 	var handle := TweensGdLayoutHandle.new()
@@ -47,10 +53,15 @@ func cancel() -> void:
 
 func _attach_group(group: TweensGdGroup) -> void:
 	_group = group
+	_following = false
 	if _paused:
 		_group.pause()
 	if _cancel_requested:
 		_group.cancel()
+
+func _set_following(value: bool) -> void:
+	if not is_terminal:
+		_following = value
 
 func _finish(reason: int, message: String = "") -> void:
 	if is_terminal:
@@ -58,4 +69,5 @@ func _finish(reason: int, message: String = "") -> void:
 	completion_reason = reason
 	error = message
 	_group = null
+	_following = false
 	ended.emit(reason)

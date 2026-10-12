@@ -3,6 +3,7 @@ extends RefCounted
 
 var duration := 0.35
 var delay := 0.0
+@warning_ignore("shadowed_global_identifier")
 var ease: int = Out.QUAD
 var size_ease: Variant = null
 var stagger_each := 0.0
@@ -16,10 +17,16 @@ func validate() -> String:
 		return "Layout delay must be finite and non-negative."
 	if not is_finite(stagger_each) or stagger_each < 0.0:
 		return "Layout stagger_each must be finite and non-negative."
-	if not is_finite(Tweens.Easing.evaluate(ease, 0.5)):
+	var selected_ease: int = ease
+	if not is_finite(Tweens.Easing.evaluate(selected_ease, 0.5)):
 		return "Layout easing is invalid."
-	if size_ease != null and (not size_ease is int or not is_finite(Tweens.Easing.evaluate(size_ease, 0.5))):
-		return "Layout size_ease is invalid."
+	if size_ease != null:
+		if not size_ease is int:
+			return "Layout size_ease is invalid."
+		@warning_ignore("unsafe_call_argument")
+		var size_ease_progress: float = Tweens.Easing.evaluate(size_ease, 0.5)
+		if not is_finite(size_ease_progress):
+			return "Layout size_ease is invalid."
 	if visual_path.is_empty() or visual_path.get_name_count() != 1 or visual_path.get_subname_count() != 0:
 		return "Layout visual_path must name one direct-child Control."
 	if playback != null:

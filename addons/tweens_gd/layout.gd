@@ -33,7 +33,8 @@ func _init(root: Control = null, layout_options: TweensGdLayoutOptions = null, e
 	if explicit_items != null:
 		_uses_explicit_items = true
 		if explicit_items is Array:
-			_explicit_items.assign(explicit_items)
+			var item_array: Array = explicit_items
+			_explicit_items.assign(item_array)
 
 func update(change: Callable, transition_options: TweensGdLayoutOptions = null) -> TweensGdLayoutHandle:
 	if active:
@@ -165,16 +166,17 @@ func _run_after_change(handle: TweensGdLayoutHandle, snapshots: Array[Snapshot],
 	var handles: Array[TweensGdHandle] = []
 	for index in matched.size():
 		var snapshot := matched[index]
-		var visual := snapshot.item.visual_control
-		_raise_visual(index, matched.size(), visual)
+		_raise_visual(index, matched.size(), snapshot.item.visual_control)
 		var item_delay := run_options.delay + index * run_options.stagger_each
-		var position_definition := Tweens.control_global_position(snapshot.final_global_position,
-			run_options.duration, run_options.ease, item_delay).with_from(snapshot.first_global_position)
+		var position_definition := Tweens.value(0.0, 1.0, run_options.duration, run_options.ease, item_delay)
+		position_definition.on_update = func(_tween: TweensGdHandle, progress: float) -> void:
+			_apply_position_progress(snapshot, progress)
 		var selected_size_ease: int = run_options.ease if run_options.size_ease == null else run_options.size_ease
-		var size_definition := Tweens.control_size(snapshot.final_size,
-			run_options.duration, selected_size_ease, item_delay).with_from(snapshot.first_size)
-		handles.append(Tweens.play(visual, position_definition, null, run_options.playback))
-		handles.append(Tweens.play(visual, size_definition, null, run_options.playback))
+		var size_definition := Tweens.value(0.0, 1.0, run_options.duration, selected_size_ease, item_delay)
+		size_definition.on_update = func(_tween: TweensGdHandle, progress: float) -> void:
+			_apply_size_progress(snapshot, progress)
+		handles.append(Tweens.play(_root, position_definition, null, run_options.playback))
+		handles.append(Tweens.play(_root, size_definition, null, run_options.playback))
 	if handles.is_empty():
 		_settle_snapshots(snapshots)
 		active = false
@@ -184,9 +186,65 @@ func _run_after_change(handle: TweensGdLayoutHandle, snapshots: Array[Snapshot],
 	handle._attach_group(group)
 	var reason: int = await group.end
 	var error_message: String = group.error
+	if reason == Tweens.Reason.COMPLETED:
+		handle._set_following(true)
+		var final_rects_stable: bool = await _follow_live_rects(handle, snapshots, tree, run_options.playback)
+		handle._set_following(false)
+		if not is_instance_valid(_root) or not _root.is_inside_tree():
+			_settle_snapshots(snapshots)
+			active = false
+			handle._finish(Tweens.Reason.OWNER_EXITED)
+			return
+		if handle._cancel_requested:
+			_settle_snapshots(snapshots)
+			active = false
+			handle._finish(Tweens.Reason.CANCELLED)
+			return
+		if not final_rects_stable:
+			_settle_snapshots(snapshots)
+			active = false
+			handle._finish(Tweens.Reason.FAILED, "Live layout targets stopped before settling.")
+			return
 	_settle_snapshots(snapshots)
 	active = false
 	handle._finish(reason, error_message)
+
+func _follow_live_rects(handle: TweensGdLayoutHandle, snapshots: Array[Snapshot], tree: SceneTree,
+		playback: TweensGdPlaybackOptions) -> bool:
+	var previous := _layout_rects(snapshots)
+	var consecutive := 0
+	while is_instance_valid(_root) and _root.is_inside_tree() and not handle._cancel_requested:
+		if playback == null or playback.process_mode == Tweens.Process.PROCESS:
+			await tree.process_frame
+		else:
+			await tree.physics_frame
+		if not is_instance_valid(_root) or not _root.is_inside_tree() or handle._cancel_requested:
+			return false
+		var current := _layout_rects(snapshots)
+		if handle.is_paused or not _can_follow(playback):
+			consecutive = 0
+			previous = current
+			continue
+		_apply_current_rects(snapshots)
+		if _same_rects(current, previous):
+			consecutive += 1
+		else:
+			consecutive = 0
+		previous = current
+		if consecutive >= 2:
+			return true
+	return false
+
+func _can_follow(playback: TweensGdPlaybackOptions) -> bool:
+	if playback == null:
+		return _root.can_process()
+	match playback.pause_mode:
+		Tweens.Pause.ALWAYS:
+			return true
+		Tweens.Pause.SCENE_TREE:
+			return not _root.get_tree().paused
+		_:
+			return _root.can_process()
 
 func _matching_snapshots(snapshots: Array[Snapshot]) -> Array[Snapshot]:
 	var current_items := _discover_items()
@@ -231,6 +289,26 @@ func _capture_final_rects(snapshots: Array[Snapshot]) -> void:
 			snapshot.final_size = slot.size
 			snapshot.has_final = true
 
+func _apply_position_progress(snapshot: Snapshot, progress: float) -> void:
+	if not snapshot.item.validate(_root).is_empty():
+		return
+	var rect := snapshot.item.layout_control.get_global_rect()
+	snapshot.item.visual_control.global_position = snapshot.first_global_position.lerp(rect.position, progress)
+
+func _apply_size_progress(snapshot: Snapshot, progress: float) -> void:
+	if not snapshot.item.validate(_root).is_empty():
+		return
+	var rect := snapshot.item.layout_control.get_global_rect()
+	snapshot.item.visual_control.size = snapshot.first_size.lerp(rect.size, progress)
+
+func _apply_current_rects(snapshots: Array[Snapshot]) -> void:
+	for snapshot in snapshots:
+		if not snapshot.item.validate(_root).is_empty():
+			continue
+		var rect := snapshot.item.layout_control.get_global_rect()
+		snapshot.item.visual_control.global_position = rect.position
+		snapshot.item.visual_control.size = rect.size
+
 func _hold_first_state(snapshots: Array[Snapshot]) -> void:
 	for snapshot in snapshots:
 		if not snapshot.item.validate(_root).is_empty():
@@ -256,7 +334,17 @@ func _settle_snapshots(snapshots: Array[Snapshot]) -> void:
 		var visual := snapshot.item.visual_control
 		var slot := snapshot.item.layout_control
 		if is_instance_valid(slot) and visual.get_parent() == slot:
-			if snapshot.has_final:
+			if slot.is_inside_tree():
+				var rect := slot.get_global_rect()
+				if visual.is_inside_tree():
+					visual.global_position = rect.position
+				else:
+					visual.position = Vector2.ZERO
+				visual.size = rect.size
+				snapshot.final_global_position = rect.position
+				snapshot.final_size = rect.size
+				snapshot.has_final = true
+			elif snapshot.has_final:
 				if visual.is_inside_tree():
 					visual.global_position = snapshot.final_global_position
 				else:
