@@ -64,7 +64,7 @@ const speculation = {
 				if (track) localStorage.setItem('tweens-lang', track);
 				else lang = localStorage.getItem('tweens-lang');
 			} catch {}
-			root.dataset.lang = lang === 'gdscript' ? 'gdscript' : 'csharp';
+			root.dataset.lang = lang === 'csharp' ? 'csharp' : 'gdscript';
 		};
 		apply();
 
