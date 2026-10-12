@@ -52,7 +52,8 @@ func journey() -> Array[TweensGdGroup]:
 		Tweens.animate(targets.trail, lay()),
 		Tweens.animate(targets.disc, disc()),
 		Tweens.animate(targets.rim, rim()),
-		Tweens.animate(targets.dust, dust()),
+		Tweens.animate(targets.leaves, toss()),
+		Tweens.animate(targets.impact, impact()),
 	]
 	for i in targets.ripples.size(): plays.append(Tweens.animate(targets.ripples[i], ripple(i)))
 	return plays
@@ -533,27 +534,43 @@ func lay() -> TweensGdKeyframes:
 		t(LENGTH): {"speed_scale": 1.0},
 	})
 
-## Puffs of paper dust at every landing, and along the wordmark as its letters land.
-func dust() -> TweensGdKeyframes:
+## Every touchdown of the disc as [time, height]: its drop and rebound, each hop onto a BOUNCE letter, and the
+## landing after BOUNCE and its rebound.
+func contacts() -> Array:
+	var touchdowns := [[bars(1) + EIGHTH, 0.0], [bars(1) + BEAT, 0.0]]
+	for i in targets.bounce.size(): touchdowns.append([landing(i), targets.cap])
+	touchdowns.append_array([[landing(6), 0.0], [landing(6) + EIGHTH, 0.0]])
+	return touchdowns
+
+## A spray of small leaves at every touchdown of the disc.
+func impact() -> TweensGdKeyframes:
+	var frames := {t(0): {"y": 0.02, "amount_ratio": 0.0}}
+	for touchdown: Array in contacts():
+		var at: float = touchdown[0]
+		var height: float = touchdown[1]
+		key(frames, at - 0.04, {"y": height + 0.02})
+		key(frames, at - 0.01, {"amount_ratio": 0.0})
+		key(frames, at, {"amount_ratio": 1.0})
+		key(frames, at + 0.04, {"amount_ratio": 1.0})
+		key(frames, at + 0.05, {"amount_ratio": 0.0})
+	return timeline(frames)
+
+## Leaves thrown into the air at every landing on the page, and along the wordmark as its letters land.
+func toss() -> TweensGdKeyframes:
 	var first: Vector3 = landings()[0][1]
 	var frames := {t(0): {"x": first.x, "z": first.z, "amount_ratio": 0.0}}
-	for spot: Array in landings():
-		var at: float = spot[0]
-		var point: Vector3 = spot[1]
-		key(frames, at - 0.03, {"x": point.x, "z": point.z})
-		key(frames, at - 0.02, {"amount_ratio": 0.0})
-		key(frames, at, {"amount_ratio": 1.0})
-		key(frames, at + 0.1, {"amount_ratio": 1.0})
-		key(frames, at + 0.12, {"amount_ratio": 0.0})
-	var left := on(5, page(targets.logo[0]))
-	var right := on(5, page(targets.logo[-1]))
-	key(frames, 46.055, {"x": left.x, "z": left.z})
-	key(frames, 46.085, {"amount_ratio": 0.0})
-	key(frames, 46.105, {"amount_ratio": 1.0})
-	key(frames, 48.73, {"x": right.x, "z": right.z, "interpolation": Tweens.Interpolation.LINEAR})
-	key(frames, 48.755, {"amount_ratio": 1.0})
-	key(frames, 48.775, {"amount_ratio": 0.0})
+	for spot: Array in landings(): throw(frames, spot[0], spot[1], 0.1)
+	# A smaller throw as each wordmark letter lands, just in front of it, so the leaves fly up before the letters.
+	for i in targets.logo.size(): throw(frames, bars(15) + EIGHTH * i, on(5, page(targets.logo[i]) + Vector3.BACK * 0.3), 0.05)
 	return timeline(frames)
+
+## Keys the emitter to a spot and opens it for [param open] seconds.
+func throw(frames: Dictionary, at: float, spot: Vector3, open: float) -> void:
+	key(frames, at - 0.03, {"x": spot.x, "z": spot.z})
+	key(frames, at - 0.02, {"amount_ratio": 0.0})
+	key(frames, at, {"amount_ratio": 1.0})
+	key(frames, at + open, {"amount_ratio": 1.0})
+	key(frames, at + open + 0.02, {"amount_ratio": 0.0})
 
 ## Confetti bursts from the wordmark when the dot becomes its period.
 func burst(shift: float) -> TweensGdKeyframes:

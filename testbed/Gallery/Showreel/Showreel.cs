@@ -25,7 +25,7 @@ public sealed partial class Showreel : GalleryEffect
     private Node3D dot = null!;
     private Sprite3D disc = null!, godot = null!;
     private Sprite3D rim = null!;
-    private GpuParticles3D trail = null!, dust = null!, confetti = null!;
+    private GpuParticles3D trail = null!, leaves = null!, impact = null!, confetti = null!;
     private MeshInstance3D[] ripples = [], ticks = [];
     private Label3D[] from = [], to = [], ease = [], bounce = [], elastic = [], keyframes = [], diamonds = [], logo = [];
     private Label3D subtitle = null!;
@@ -71,7 +71,7 @@ public sealed partial class Showreel : GalleryEffect
         dot = Get<Node3D>("Dot");
         disc = Get<Sprite3D>("Disc");
         rim = Get<Sprite3D>("Rim");
-        (trail, dust, confetti) = (Get<GpuParticles3D>("Trail"), Get<GpuParticles3D>("Dust"), Get<GpuParticles3D>("Confetti"));
+        (trail, leaves, impact, confetti) = (Get<GpuParticles3D>("Trail"), Get<GpuParticles3D>("Leaves"), Get<GpuParticles3D>("Impact"), Get<GpuParticles3D>("Confetti"));
         ripples = Children<MeshInstance3D>("Ripples");
         fade = Get<ColorRect>("Fade");
 
@@ -116,7 +116,8 @@ public sealed partial class Showreel : GalleryEffect
         ["disc"] = disc,
         ["rim"] = rim,
         ["trail"] = trail,
-        ["dust"] = dust,
+        ["leaves"] = leaves,
+        ["impact"] = impact,
         ["confetti"] = confetti,
         ["ripples"] = new Godot.Collections.Array<MeshInstance3D>(ripples),
         ["from"] = new Godot.Collections.Array<Label3D>(from),
