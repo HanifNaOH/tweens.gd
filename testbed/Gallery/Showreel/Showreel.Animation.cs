@@ -10,7 +10,7 @@ using tweens.gd;
 using Key = tweens.gd.Tweens.Keyframe;
 namespace testbed;
 
-// Scene setup is in Showreel.cs. "Along the Way": a dot travels a page from FROM to the period of TWEENS.GD, and each
+// The scene is Showreel.tscn. "Along the Way": a dot travels a page from FROM to the period of TWEENS.GD, and each
 // word it passes stands up and acts out its name. Every node plays keyframe definitions on one 55-second loop, timed
 // to an 80 bpm track.
 public sealed partial class Showreel
@@ -312,7 +312,7 @@ public sealed partial class Showreel
         List<Key> keys = [];
         void Visit(double at, Vector3 point, Interpolation? ease = null) => keys.Add(Key.At(T(at), x: point.X, z: point.Z, interpolation: ease));
         Vector3 start = On(0, new Vector3(Middle(from), 0, 0)), end = On(0, new Vector3(Middle(to), 0, 0));
-        var ruler = ticks.Select(tick => On(1, new Vector3(tick.Position.X, 0, 0))).ToArray();
+        var ruler = ticks.Select(tick => On(1, new Vector3(Page(tick).X, 0, 0))).ToArray();
         Visit(0, start);
         Visit(8.605, start);
         Visit(11.605, end, InOut.Sine);
@@ -325,21 +325,21 @@ public sealed partial class Showreel
         Visit(Tick(8), ruler[8], InOut.Cubic);
         Visit(Bars(7) + Beat, ruler[8]);
         // Speeds up into the first hop.
-        var liftOff = On(2, new Vector3(bounce[0].Position.X - 0.6f, 0, 0));
+        var liftOff = On(2, new Vector3(Page(bounce[0]).X - 0.6f, 0, 0));
         Visit((Bars(7) + Beat + Takeoff) / 2, Bend(1, ruler[8], liftOff));
         Visit(Takeoff, liftOff);
         for (var i = 0; i < bounce.Length; i++)
-            Visit(Landing(i), On(2, new Vector3(bounce[i].Position.X, 0, 0)), Interpolation.Linear);
-        float off = bounce[^1].Position.X;
+            Visit(Landing(i), On(2, new Vector3(Page(bounce[i]).X, 0, 0)), Interpolation.Linear);
+        float off = Page(bounce[^1]).X;
         Visit(Landing(6), On(2, new Vector3(off + 1, 0, 0)), Interpolation.Linear);
         var rebound = On(2, new Vector3(off + 1.5f, 0, 0));
         Visit(Landing(6) + Eighth, rebound);
-        Vector3 into = On(3, new Vector3(elastic[0].Position.X, 0, 0.35f)), past = On(3, new Vector3(elastic[^1].Position.X, 0, 0.35f));
+        Vector3 into = On(3, new Vector3(Page(elastic[0]).X, 0, 0.35f)), past = On(3, new Vector3(Page(elastic[^1]).X, 0, 0.35f));
         Visit((Landing(6) + Eighth + Stretch(0)) / 2, Bend(2, rebound, into));
         Visit(Stretch(0), into);
         Visit(Stretch(6), past, Interpolation.Linear);
         // Smooth interpolation curves the path through every diamond.
-        var waypoints = diamonds.Select(diamond => On(4, diamond.Position)).ToArray();
+        var waypoints = diamonds.Select(diamond => On(4, Page(diamond))).ToArray();
         Visit((Stretch(6) + Waypoint(0)) / 2, Bend(3, past, waypoints[0]));
         for (var i = 0; i < diamonds.Length; i++) Visit(Waypoint(i), waypoints[i]);
         var front = On(5, new Vector3(period.X, 0, 0.25f));
@@ -463,7 +463,7 @@ public sealed partial class Showreel
 
     // Where the dot lands on the page: its drop, the end of BOUNCE, and the period.
     private (double At, Vector3 Spot)[] Landings() => [
-        (Bars(1) + Eighth, On(0, new Vector3(Middle(from), 0, 0))), (Landing(6), On(2, new Vector3(bounce[^1].Position.X + 1, 0, 0))),
+        (Bars(1) + Eighth, On(0, new Vector3(Middle(from), 0, 0))), (Landing(6), On(2, new Vector3(Page(bounce[^1]).X + 1, 0, 0))),
         (Bars(16), On(5, period)),
     ];
 
@@ -506,7 +506,7 @@ public sealed partial class Showreel
                 Key.At(T(time + 0.1), Ratio(1)), Key.At(T(time + 0.12), Ratio(0)),
             ]);
         }
-        Vector3 left = On(5, logo[0].Position), right = On(5, logo[^1].Position);
+        Vector3 left = On(5, Page(logo[0])), right = On(5, Page(logo[^1]));
         keys.AddRange([
             Key.At(T(46.055), x: left.X, z: left.Z), Key.At(T(46.085), Ratio(0)), Key.At(T(46.105), Ratio(1)),
             Key.At(T(48.73), x: right.X, z: right.Z, interpolation: Interpolation.Linear),

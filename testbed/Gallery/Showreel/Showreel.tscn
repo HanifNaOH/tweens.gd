@@ -1,0 +1,835 @@
+[gd_scene format=3 uid="uid://cvspty7eg4dvj"]
+
+[ext_resource type="Shader" uid="uid://ctw3r6qg66o8k" path="res://Gallery/Showreel/Paper.gdshader" id="1_paper"]
+[ext_resource type="Script" uid="uid://cs30v2p55mcic" path="res://Gallery/Showreel/Lettering.cs" id="2_lettering"]
+[ext_resource type="FontFile" uid="uid://dnv5m0ddsha70" path="res://Fonts/BricolageGrotesque-ExtraBold.ttf" id="3_display"]
+[ext_resource type="Texture2D" uid="uid://elogtyi7fgfg" path="res://Logos/godot-logotype.svg" id="4_godot"]
+[ext_resource type="Script" uid="uid://bpm30mh5d40jx" path="res://Gallery/Showreel/Definition.cs" id="5_definition"]
+[ext_resource type="FontFile" uid="uid://dijctuamqfmnv" path="res://Fonts/JetBrainsMono-Regular.ttf" id="7_mono"]
+
+[sub_resource type="FontVariation" id="FontVariation_italic"]
+base_font = ExtResource("7_mono")
+variation_transform = Transform2D(1, 0.2, 0, 1, 0, 0)
+
+[sub_resource type="Environment" id="Environment_8yaoy"]
+background_mode = 1
+background_color = Color(0.9647059, 0.94509804, 0.90588236, 1)
+ambient_light_source = 2
+ambient_light_color = Color(1, 1, 1, 1)
+ambient_light_energy = 0.69
+fog_enabled = true
+fog_mode = 1
+fog_light_color = Color(0.9647059, 0.94509804, 0.90588236, 1)
+fog_density = 1.0
+fog_depth_curve = 1.1
+fog_depth_begin = 0.0
+fog_depth_end = 60.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_m3rhv"]
+render_priority = -128
+shader = ExtResource("1_paper")
+shader_parameter/paper = Color(0.9647059, 0.94509804, 0.90588236, 1)
+shader_parameter/rule = Color(0.92156863, 0.8862745, 0.827451, 1)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_xabdm"]
+size = Vector2(600, 600)
+
+[sub_resource type="Gradient" id="Gradient_kuf08"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.25, 0.5, 0.75)
+colors = PackedColorArray(0.9137255, 0.76862746, 0.6431373, 1, 0.8784314, 0.47843137, 0.37254903, 1, 0.9411765, 0.65882355, 0.1882353, 1, 0.6392157, 0.42745098, 0.28235295, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_nlr48"]
+gradient = SubResource("Gradient_kuf08")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_024wx"]
+emission_shape = 3
+emission_box_extents = Vector3(6, 2.5, 4)
+angle_max = 360.0
+spread = 15.0
+initial_velocity_min = 0.25
+initial_velocity_max = 0.6
+angular_velocity_min = -40.0
+angular_velocity_max = 40.0
+gravity = Vector3(0, -0.06, 0)
+scale_min = 0.6
+scale_max = 1.2
+color_initial_ramp = SubResource("GradientTexture1D_nlr48")
+
+[sub_resource type="Gradient" id="Gradient_6c61w"]
+offsets = PackedFloat32Array(0.9375, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_cgx28"]
+gradient = SubResource("Gradient_6c61w")
+width = 32
+height = 32
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dis4c"]
+transparency = 1
+cull_mode = 2
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_texture = SubResource("GradientTexture2D_cgx28")
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_38oel"]
+material = SubResource("StandardMaterial3D_dis4c")
+size = Vector2(0.05, 0.05)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1oqau"]
+cull_mode = 2
+shading_mode = 0
+albedo_color = Color(0.8784314, 0.34117648, 0.23529412, 1)
+
+[sub_resource type="QuadMesh" id="QuadMesh_yq28r"]
+size = Vector2(0.05, 0.34)
+center_offset = Vector3(0, 0.17, 0)
+
+[sub_resource type="Gradient" id="Gradient_vs3y4"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.2, 0.4, 0.6, 0.8)
+colors = PackedColorArray(0.8784314, 0.34117648, 0.23529412, 1, 0.9411765, 0.65882355, 0.1882353, 1, 0.8784314, 0.47843137, 0.37254903, 1, 0.40392157, 0.63529414, 0.8666667, 1, 0.60784316, 0.8392157, 0.6117647, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_in0h5"]
+gradient = SubResource("Gradient_vs3y4")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_1yug8"]
+angle_max = 360.0
+direction = Vector3(0, 1, 0)
+spread = 40.0
+initial_velocity_min = 3.0
+initial_velocity_max = 5.5
+angular_velocity_min = -180.0
+angular_velocity_max = 180.0
+gravity = Vector3(0, -3.5, 0)
+damping_min = 0.6
+damping_max = 1.2
+scale_min = 0.7
+scale_max = 1.3
+color_initial_ramp = SubResource("GradientTexture1D_in0h5")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6gacn"]
+transparency = 1
+cull_mode = 2
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_texture = SubResource("GradientTexture2D_cgx28")
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_bc45i"]
+material = SubResource("StandardMaterial3D_6gacn")
+size = Vector2(0.08, 0.05)
+
+[sub_resource type="Gradient" id="Gradient_oj7fl"]
+offsets = PackedFloat32Array(0.984375, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_e4jdj"]
+gradient = SubResource("Gradient_oj7fl")
+width = 128
+height = 128
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_5qrw6"]
+gravity = Vector3(0, 0, 0)
+scale_min = 0.8
+scale_max = 1.2
+color = Color(0.23921569, 0.16470589, 0.13333334, 0.7)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ng25c"]
+transparency = 1
+cull_mode = 2
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_texture = SubResource("GradientTexture2D_cgx28")
+
+[sub_resource type="QuadMesh" id="QuadMesh_5kbvh"]
+material = SubResource("StandardMaterial3D_ng25c")
+size = Vector2(0.07, 0.07)
+orientation = 1
+
+[sub_resource type="Gradient" id="Gradient_hjm42"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33333334, 0.6666667)
+colors = PackedColorArray(0.9137255, 0.76862746, 0.6431373, 1, 0.6392157, 0.42745098, 0.28235295, 1, 0.8784314, 0.47843137, 0.37254903, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_tmb5f"]
+gradient = SubResource("Gradient_hjm42")
+
+[sub_resource type="Gradient" id="Gradient_75lvc"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_gpgjj"]
+gradient = SubResource("Gradient_75lvc")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_ua1ty"]
+direction = Vector3(0, 1, 0)
+spread = 75.0
+initial_velocity_min = 0.6
+initial_velocity_max = 1.6
+gravity = Vector3(0, -2.5, 0)
+damping_min = 1.5
+damping_max = 3.0
+scale_min = 0.6
+scale_max = 1.3
+color_ramp = SubResource("GradientTexture1D_gpgjj")
+color_initial_ramp = SubResource("GradientTexture1D_tmb5f")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0gegy"]
+transparency = 1
+cull_mode = 2
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_texture = SubResource("GradientTexture2D_cgx28")
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_g54yp"]
+material = SubResource("StandardMaterial3D_0gegy")
+size = Vector2(0.06, 0.06)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4g6yh"]
+cull_mode = 2
+shading_mode = 0
+albedo_color = Color(0.78431374, 0.40784314, 0.3529412, 1)
+
+[sub_resource type="TorusMesh" id="TorusMesh_84rov"]
+inner_radius = 0.96
+
+[node name="Showreel" type="Node3D" unique_id=1997410623]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=697213619]
+editor_description = "Linear tone mapping keeps the type colors exact. Depth fog fades the page into the paper-colored background well before the camera's far plane."
+environment = SubResource("Environment_8yaoy")
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=668938047]
+editor_description = "A low sun at the front left: the lit page matches the background, and type casts soft, light shadows."
+transform = Transform3D(0.8660254, 0.30783075, -0.3940054, 0, 0.7880108, 0.6156615, 0.5, -0.5331785, 0.68243736, 0, 0, 0)
+light_energy = 0.5
+light_angular_distance = 0.6
+shadow_enabled = true
+shadow_opacity = 0.75
+directional_shadow_blend_splits = true
+directional_shadow_max_distance = 24.0
+
+[node name="Page" type="MeshInstance3D" parent="." unique_id=1284077820]
+editor_description = "Large enough that the fog carries it into the background before its edge."
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0, 0)
+material_override = SubResource("ShaderMaterial_m3rhv")
+cast_shadow = 0
+mesh = SubResource("PlaneMesh_xabdm")
+
+[node name="Rig" type="Node3D" parent="." unique_id=424668658]
+unique_name_in_owner = true
+editor_description = "The camera sits on a rig: the rig glides over the page and turns, the camera dollies."
+
+[node name="Camera" type="Camera3D" parent="Rig" unique_id=981338227]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
+current = true
+fov = 46.0
+far = 80.0
+
+[node name="Drift" type="GPUParticles3D" parent="Rig" unique_id=1489404992]
+editor_description = "A few paper flakes drift along the direction of travel, near wherever the camera looks."
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+cast_shadow = 0
+amount = 50
+lifetime = 7.0
+preprocess = 5.0
+visibility_aabb = AABB(-40, -10, -20, 80, 20, 40)
+process_material = SubResource("ParticleProcessMaterial_024wx")
+draw_pass_1 = SubResource("QuadMesh_38oel")
+
+[node name="Stations" type="Node3D" parent="." unique_id=1955346557]
+unique_name_in_owner = true
+editor_description = "Each scene lies on its own patch of the page, turned and moved a little, so the path meanders between them. The dot's route and the camera's shots are relative to these stations."
+
+[node name="FromToStation" type="Node3D" parent="Stations" unique_id=1284774523]
+transform = Transform3D(0.99026805, 0, 0.1391731, 0, 1, 0, -0.1391731, 0, 0.99026805, -0.0038927794, 0, -0.055669244)
+
+[node name="From" type="Node3D" parent="Stations/FromToStation" unique_id=369850007]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -0.8)
+script = ExtResource("2_lettering")
+Text = "FROM"
+Font = ExtResource("3_display")
+Color = Color(0.6392157, 0.42745098, 0.28235295, 1)
+
+[node name="To" type="Node3D" parent="Stations/FromToStation" unique_id=435083830]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 0, -0.8)
+script = ExtResource("2_lettering")
+Text = "TO"
+Font = ExtResource("3_display")
+Color = Color(0.78431374, 0.40784314, 0.3529412, 1)
+
+[node name="Credit" type="Node3D" parent="Stations/FromToStation" unique_id=133623731]
+unique_name_in_owner = true
+editor_description = "Floats in the sky above the dot before it drops; the animation raises it from below. High above the page, its shadow would only smudge the paper."
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.06, 2.5, -1.6)
+
+[node name="Godot" type="Sprite3D" parent="Stations/FromToStation/Credit" unique_id=269906397]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7055085, 0)
+cast_shadow = 0
+pixel_size = 0.002118644
+alpha_cut = 2
+texture = ExtResource("4_godot")
+
+[node name="Line" type="Node3D" parent="Stations/FromToStation/Credit" unique_id=2054735561]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5510169, 0)
+script = ExtResource("2_lettering")
+Text = "FULLY CREATED IN"
+Font = ExtResource("3_display")
+FontSize = 100
+Color = Color(0.23921569, 0.16470589, 0.13333334, 1)
+Printed = false
+CastShadow = false
+
+[node name="Definition" type="Node3D" parent="Stations/FromToStation" unique_id=561792727]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.4, 0, 0.8)
+script = ExtResource("5_definition")
+Text = "tween, n. software-calculated frame that interpolates changes in spatial coordinates, scale, rotation, or opacity between two keyframe markers across a timeline."
+PunchLine = "when you need a coat but no hat"
+Font = SubResource("FontVariation_italic")
+Color = Color(0.23921569, 0.16470589, 0.13333334, 1)
+BodyColor = Color(0.23921569, 0.16470589, 0.13333334, 0.7)
+PunchColor = Color(0.78431374, 0.40784314, 0.3529412, 1)
+
+[node name="Progress0" type="Label3D" parent="Stations/FromToStation" unique_id=1855703001]
+editor_description = "The percentages mark where the dot is at each quarter of its one keyframed journey."
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -2.06, 0.005, 0.55)
+pixel_size = 0.004
+offset = Vector2(0, -17.5)
+modulate = Color(0.23921569, 0.16470589, 0.13333334, 0.55)
+text = "0%"
+font = ExtResource("7_mono")
+font_size = 56
+outline_size = 0
+vertical_alignment = 2
+
+[node name="Arrow" type="Label3D" parent="Stations/FromToStation" unique_id=188494039]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -0.4425, 0.005, 0.25)
+pixel_size = 0.004
+offset = Vector2(0, -17.5)
+modulate = Color(0.23921569, 0.16470589, 0.13333334, 0.55)
+text = "→"
+font = ExtResource("7_mono")
+font_size = 56
+outline_size = 0
+vertical_alignment = 2
+
+[node name="EaseStation" type="Node3D" parent="Stations" unique_id=1365390059]
+transform = Transform3D(0.97437006, 0, -0.22495104, 0, 1, 0, 0.22495104, 0, 0.97437006, 0.23071241, 0, -0.7472503)
+
+[node name="Ease" type="Node3D" parent="Stations/EaseStation" unique_id=1267041969]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.1, 0, -1.25)
+script = ExtResource("2_lettering")
+Text = "EASE"
+Font = ExtResource("3_display")
+Color = Color(0.23921569, 0.16470589, 0.13333334, 1)
+
+[node name="Definition" type="Node3D" parent="Stations/EaseStation" unique_id=284417219]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 0, 0.8)
+script = ExtResource("5_definition")
+Text = "easing, v. process of modifying a graph curve, to modulate velocity over time, transforming a constant-rate tween into a non-linear motion curve."
+PunchLine = "into a soft, warm sofa"
+Width = 5.0
+Font = SubResource("FontVariation_italic")
+Color = Color(0.23921569, 0.16470589, 0.13333334, 1)
+BodyColor = Color(0.23921569, 0.16470589, 0.13333334, 0.7)
+PunchColor = Color(0.78431374, 0.40784314, 0.3529412, 1)
+
+[node name="Ruler" type="Node3D" parent="Stations/EaseStation" unique_id=2130423812]
+unique_name_in_owner = true
+editor_description = "Ticks at the positions an InOut.Cubic tween passes at equal time steps: an animator's spacing chart."
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.6, 0, -0.3)
+
+[node name="Tick1" type="MeshInstance3D" parent="Stations/EaseStation/Ruler" unique_id=1507854887]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0.005, 0)
+material_override = SubResource("StandardMaterial3D_1oqau")
+mesh = SubResource("QuadMesh_yq28r")
+
+[node name="Tick2" type="MeshInstance3D" parent="Stations/EaseStation/Ruler" unique_id=1827480525]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0.0390625, 0.005, 0)
+material_override = SubResource("StandardMaterial3D_1oqau")
+mesh = SubResource("QuadMesh_yq28r")
+
+[node name="Tick3" type="MeshInstance3D" parent="Stations/EaseStation/Ruler" unique_id=316089725]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0.3125, 0.005, 0)
+material_override = SubResource("StandardMaterial3D_1oqau")
+mesh = SubResource("QuadMesh_yq28r")
+
+[node name="Tick4" type="MeshInstance3D" parent="Stations/EaseStation/Ruler" unique_id=862800303]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 1.0546875, 0.005, 0)
+material_override = SubResource("StandardMaterial3D_1oqau")
+mesh = SubResource("QuadMesh_yq28r")
+
+[node name="Tick5" type="MeshInstance3D" parent="Stations/EaseStation/Ruler" unique_id=570869627]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 2.5, 0.005, 0)
+material_override = SubResource("StandardMaterial3D_1oqau")
+mesh = SubResource("QuadMesh_yq28r")
+
+[node name="Tick6" type="MeshInstance3D" parent="Stations/EaseStation/Ruler" unique_id=34976433]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 3.9453125, 0.005, 0)
+material_override = SubResource("StandardMaterial3D_1oqau")
+mesh = SubResource("QuadMesh_yq28r")
+
+[node name="Tick7" type="MeshInstance3D" parent="Stations/EaseStation/Ruler" unique_id=2051552689]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 4.6875, 0.005, 0)
+material_override = SubResource("StandardMaterial3D_1oqau")
+mesh = SubResource("QuadMesh_yq28r")
+
+[node name="Tick8" type="MeshInstance3D" parent="Stations/EaseStation/Ruler" unique_id=545059293]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 4.9609375, 0.005, 0)
+material_override = SubResource("StandardMaterial3D_1oqau")
+mesh = SubResource("QuadMesh_yq28r")
+
+[node name="Tick9" type="MeshInstance3D" parent="Stations/EaseStation/Ruler" unique_id=779078780]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 5, 0.005, 0)
+material_override = SubResource("StandardMaterial3D_1oqau")
+mesh = SubResource("QuadMesh_yq28r")
+
+[node name="Slow" type="Label3D" parent="Stations/EaseStation" unique_id=1743007977]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 2.85, 0.005, -0.7)
+pixel_size = 0.004
+offset = Vector2(0, -17.5)
+modulate = Color(0.23921569, 0.16470589, 0.13333334, 0.55)
+text = "slow"
+font = ExtResource("7_mono")
+font_size = 56
+outline_size = 0
+vertical_alignment = 2
+
+[node name="Fast" type="Label3D" parent="Stations/EaseStation" unique_id=150388272]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 5.1, 0.005, -0.7)
+pixel_size = 0.004
+offset = Vector2(0, -17.5)
+modulate = Color(0.23921569, 0.16470589, 0.13333334, 0.55)
+text = "fast"
+font = ExtResource("7_mono")
+font_size = 56
+outline_size = 0
+vertical_alignment = 2
+
+[node name="SlowAgain" type="Label3D" parent="Stations/EaseStation" unique_id=1249271489]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 7.35, 0.005, -0.7)
+pixel_size = 0.004
+offset = Vector2(0, -17.5)
+modulate = Color(0.23921569, 0.16470589, 0.13333334, 0.55)
+text = "slow"
+font = ExtResource("7_mono")
+font_size = 56
+outline_size = 0
+vertical_alignment = 2
+
+[node name="Progress25" type="Label3D" parent="Stations/EaseStation" unique_id=2036461379]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 2.6, 0.005, 0.55)
+pixel_size = 0.004
+offset = Vector2(0, -17.5)
+modulate = Color(0.23921569, 0.16470589, 0.13333334, 0.55)
+text = "25%"
+font = ExtResource("7_mono")
+font_size = 56
+outline_size = 0
+vertical_alignment = 2
+
+[node name="BounceStation" type="Node3D" parent="Stations" unique_id=2026766591]
+transform = Transform3D(0.9612617, 0, 0.27563736, 0, 1, 0, -0.27563736, 0, 0.9612617, 0.7951307, 0, 3.261501)
+
+[node name="Bounce" type="Node3D" parent="Stations/BounceStation" unique_id=1926713166]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.2, 0, 0)
+script = ExtResource("2_lettering")
+Text = "BOUNCE"
+Font = ExtResource("3_display")
+Color = Color(0.78431374, 0.40784314, 0.3529412, 1)
+
+[node name="Definition" type="Node3D" parent="Stations/BounceStation" unique_id=560039942]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.7, 0, 0.95)
+script = ExtResource("5_definition")
+Text = "bounce, n. swift, rebound trajectory resulting from an kinetic object colliding with a rigid surface, governed by the surface and object's combined coefficient of restitution."
+PunchLine = "at times in our step"
+Font = SubResource("FontVariation_italic")
+Color = Color(0.23921569, 0.16470589, 0.13333334, 1)
+BodyColor = Color(0.23921569, 0.16470589, 0.13333334, 0.7)
+PunchColor = Color(0.78431374, 0.40784314, 0.3529412, 1)
+
+[node name="Progress50" type="Label3D" parent="Stations/BounceStation" unique_id=857098085]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 10.484, 0.005, 0.55)
+pixel_size = 0.004
+offset = Vector2(0, -17.5)
+modulate = Color(0.23921569, 0.16470589, 0.13333334, 0.55)
+text = "50%"
+font = ExtResource("7_mono")
+font_size = 56
+outline_size = 0
+vertical_alignment = 2
+
+[node name="ElasticStation" type="Node3D" parent="Stations" unique_id=1773377913]
+transform = Transform3D(0.98162717, 0, -0.190809, 0, 1, 0, 0.190809, 0, 0.98162717, 1.5366163, 0, -3.5266204)
+
+[node name="Elastic" type="Node3D" parent="Stations/ElasticStation" unique_id=1917327428]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.6, 0, -0.6)
+script = ExtResource("2_lettering")
+Text = "ELASTIC"
+Font = ExtResource("3_display")
+Color = Color(0.8784314, 0.47843137, 0.37254903, 1)
+
+[node name="Definition" type="Node3D" parent="Stations/ElasticStation" unique_id=342303376]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.6, 0, 0.85)
+script = ExtResource("5_definition")
+Text = "elastic, a. describing an easing function or motion that overshoots its target value and oscillates before coming to rest, mimicking the springy recoil of stretched rubber."
+PunchLine = "something that ferrets are"
+Width = 5.0
+Font = SubResource("FontVariation_italic")
+Color = Color(0.23921569, 0.16470589, 0.13333334, 1)
+BodyColor = Color(0.23921569, 0.16470589, 0.13333334, 0.7)
+PunchColor = Color(0.78431374, 0.40784314, 0.3529412, 1)
+
+[node name="KeyframesStation" type="Node3D" parent="Stations" unique_id=686429331]
+transform = Transform3D(0.9702957, 0, 0.2419219, 0, 1, 0, -0.2419219, 0, 0.9702957, 1.6797295, 0, 4.428745)
+
+[node name="Keyframes" type="Node3D" parent="Stations/KeyframesStation" unique_id=1871784574]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21.2, 0, -0.85)
+script = ExtResource("2_lettering")
+Text = "KEYFRAMES"
+Font = ExtResource("3_display")
+FontSize = 150
+Color = Color(0.23921569, 0.16470589, 0.13333334, 1)
+
+[node name="Definition" type="Node3D" parent="Stations/KeyframesStation" unique_id=97273385]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19.4, 0, 0.9)
+script = ExtResource("5_definition")
+Text = "keyframes, n. precise temporal marker placed along a software timeline to lock specific transformation parameters, serving as mathematical anchors between which interpolation occurs."
+PunchLine = "the moments we remember"
+Font = SubResource("FontVariation_italic")
+Color = Color(0.23921569, 0.16470589, 0.13333334, 1)
+BodyColor = Color(0.23921569, 0.16470589, 0.13333334, 0.7)
+PunchColor = Color(0.78431374, 0.40784314, 0.3529412, 1)
+
+[node name="Keys" type="Node3D" parent="Stations/KeyframesStation" unique_id=1324318583]
+unique_name_in_owner = true
+editor_description = "One key per KEYFRAMES letter, weaving to either side of the dot's path."
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21.2, 0, 0)
+
+[node name="Key1" type="Label3D" parent="Stations/KeyframesStation/Keys" unique_id=631899309]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -1.6700001, 0.005, 0.25)
+pixel_size = 0.004
+offset = Vector2(0, -34.375)
+alpha_cut = 2
+modulate = Color(0.9137255, 0.76862746, 0.6431373, 1)
+text = "◆"
+font = ExtResource("7_mono")
+font_size = 110
+outline_size = 0
+vertical_alignment = 2
+
+[node name="Key2" type="Label3D" parent="Stations/KeyframesStation/Keys" unique_id=1423746975]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -1.27, 0.005, -0.25)
+pixel_size = 0.004
+offset = Vector2(0, -34.375)
+alpha_cut = 2
+modulate = Color(0.9137255, 0.76862746, 0.6431373, 1)
+text = "◆"
+font = ExtResource("7_mono")
+font_size = 110
+outline_size = 0
+vertical_alignment = 2
+
+[node name="Key3" type="Label3D" parent="Stations/KeyframesStation/Keys" unique_id=874947275]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -0.88000005, 0.005, 0.25)
+pixel_size = 0.004
+offset = Vector2(0, -34.375)
+alpha_cut = 2
+modulate = Color(0.9137255, 0.76862746, 0.6431373, 1)
+text = "◆"
+font = ExtResource("7_mono")
+font_size = 110
+outline_size = 0
+vertical_alignment = 2
+
+[node name="Key4" type="Label3D" parent="Stations/KeyframesStation/Keys" unique_id=386855967]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -0.49800006, 0.005, -0.25)
+pixel_size = 0.004
+offset = Vector2(0, -34.375)
+alpha_cut = 2
+modulate = Color(0.9137255, 0.76862746, 0.6431373, 1)
+text = "◆"
+font = ExtResource("7_mono")
+font_size = 110
+outline_size = 0
+vertical_alignment = 2
+
+[node name="Key5" type="Label3D" parent="Stations/KeyframesStation/Keys" unique_id=1939203742]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -0.10800004, 0.005, 0.25)
+pixel_size = 0.004
+offset = Vector2(0, -34.375)
+alpha_cut = 2
+modulate = Color(0.9137255, 0.76862746, 0.6431373, 1)
+text = "◆"
+font = ExtResource("7_mono")
+font_size = 110
+outline_size = 0
+vertical_alignment = 2
+
+[node name="Key6" type="Label3D" parent="Stations/KeyframesStation/Keys" unique_id=651544610]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0.31399998, 0.005, -0.25)
+pixel_size = 0.004
+offset = Vector2(0, -34.375)
+alpha_cut = 2
+modulate = Color(0.9137255, 0.76862746, 0.6431373, 1)
+text = "◆"
+font = ExtResource("7_mono")
+font_size = 110
+outline_size = 0
+vertical_alignment = 2
+
+[node name="Key7" type="Label3D" parent="Stations/KeyframesStation/Keys" unique_id=1571914218]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0.816, 0.005, 0.25)
+pixel_size = 0.004
+offset = Vector2(0, -34.375)
+alpha_cut = 2
+modulate = Color(0.9137255, 0.76862746, 0.6431373, 1)
+text = "◆"
+font = ExtResource("7_mono")
+font_size = 110
+outline_size = 0
+vertical_alignment = 2
+
+[node name="Key8" type="Label3D" parent="Stations/KeyframesStation/Keys" unique_id=939586518]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 1.2940001, 0.005, -0.25)
+pixel_size = 0.004
+offset = Vector2(0, -34.375)
+alpha_cut = 2
+modulate = Color(0.9137255, 0.76862746, 0.6431373, 1)
+text = "◆"
+font = ExtResource("7_mono")
+font_size = 110
+outline_size = 0
+vertical_alignment = 2
+
+[node name="Key9" type="Label3D" parent="Stations/KeyframesStation/Keys" unique_id=196917085]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 1.6820002, 0.005, 0.25)
+pixel_size = 0.004
+offset = Vector2(0, -34.375)
+alpha_cut = 2
+modulate = Color(0.9137255, 0.76862746, 0.6431373, 1)
+text = "◆"
+font = ExtResource("7_mono")
+font_size = 110
+outline_size = 0
+vertical_alignment = 2
+
+[node name="Progress75" type="Label3D" parent="Stations/KeyframesStation" unique_id=1367082456]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 21.765001, 0.005, 0.55)
+pixel_size = 0.004
+offset = Vector2(0, -17.5)
+modulate = Color(0.23921569, 0.16470589, 0.13333334, 0.55)
+text = "75%"
+font = ExtResource("7_mono")
+font_size = 56
+outline_size = 0
+vertical_alignment = 2
+
+[node name="WordmarkStation" type="Node3D" parent="Stations" unique_id=810893724]
+transform = Transform3D(0.9961947, 0, -0.08715574, 0, 1, 0, 0.08715574, 0, 0.9961947, 1.305027, 0, -3.6554983)
+
+[node name="Logo" type="Node3D" parent="Stations/WordmarkStation" unique_id=991200691]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 27.6, 0, -0.6)
+
+[node name="Tweens" type="Node3D" parent="Stations/WordmarkStation/Logo" unique_id=1890497670]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.76, 0, 0)
+script = ExtResource("2_lettering")
+Text = "TWEENS"
+Font = ExtResource("3_display")
+FontSize = 225
+Color = Color(0.40392157, 0.63529414, 0.8666667, 1)
+Printed = false
+OutlineSize = 4
+Shade = Color(0.28627452, 0.1254902, 0.10980392, 0.45)
+
+[node name="Gd" type="Node3D" parent="Stations/WordmarkStation/Logo" unique_id=1195689152]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.0540004, 0, 0)
+script = ExtResource("2_lettering")
+Text = "GD"
+Font = ExtResource("3_display")
+FontSize = 225
+Color = Color(0.60784316, 0.8392157, 0.6117647, 1)
+Printed = false
+OutlineSize = 4
+Shade = Color(0.28627452, 0.1254902, 0.10980392, 0.45)
+
+[node name="Period" type="Marker3D" parent="Stations/WordmarkStation/Logo" unique_id=162538054]
+unique_name_in_owner = true
+editor_description = "Where the dot settles as the wordmark's period: at the center of the font's period, a little in front of the letters, so it never shares their depth."
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.294, 0.06975, 0.03)
+gizmo_extents = 0.1
+
+[node name="Confetti" type="GPUParticles3D" parent="Stations/WordmarkStation/Logo" unique_id=1868543773]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+cast_shadow = 0
+amount = 240
+amount_ratio = 0.0
+lifetime = 2.6
+visibility_aabb = AABB(-40, -10, -20, 80, 20, 40)
+process_material = SubResource("ParticleProcessMaterial_1yug8")
+draw_pass_1 = SubResource("QuadMesh_bc45i")
+
+[node name="Subtitle" type="Label3D" parent="Stations/WordmarkStation" unique_id=1543148236]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 27.6, 0.005, 0.6)
+pixel_size = 0.004
+offset = Vector2(0, -15)
+alpha_cut = 2
+modulate = Color(0.23921569, 0.16470589, 0.13333334, 1)
+text = "procedural animation for Godot · C# and GDScript"
+font = ExtResource("7_mono")
+font_size = 48
+outline_size = 0
+vertical_alignment = 2
+
+[node name="Taglines" type="Node3D" parent="Stations/WordmarkStation" unique_id=1347057398]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 27.6, 0, 1.25)
+
+[node name="Free" type="Label3D" parent="Stations/WordmarkStation/Taglines" unique_id=1121687419]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -1.7440002, 0.005, 0)
+pixel_size = 0.004
+offset = Vector2(0, -13.75)
+alpha_cut = 2
+modulate = Color(0.23921569, 0.16470589, 0.13333334, 1)
+text = "free and open source"
+font = ExtResource("7_mono")
+font_size = 44
+outline_size = 0
+vertical_alignment = 2
+
+[node name="Store" type="Label3D" parent="Stations/WordmarkStation/Taglines" unique_id=1012153945]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 1.1099999, 0.005, 0)
+pixel_size = 0.004
+offset = Vector2(0, -13.75)
+alpha_cut = 2
+modulate = Color(0.23921569, 0.16470589, 0.13333334, 1)
+text = "· available on Godot Asset Store"
+font = ExtResource("7_mono")
+font_size = 44
+outline_size = 0
+vertical_alignment = 2
+
+[node name="Progress100" type="Label3D" parent="Stations/WordmarkStation" unique_id=272673851]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 28.894001, 0.005, 0.03)
+pixel_size = 0.004
+offset = Vector2(0, -17.5)
+modulate = Color(0.23921569, 0.16470589, 0.13333334, 0.55)
+text = "100%"
+font = ExtResource("7_mono")
+font_size = 56
+outline_size = 0
+vertical_alignment = 2
+
+[node name="Dot" type="Node3D" parent="." unique_id=1068099321]
+unique_name_in_owner = true
+editor_description = "The traveller: a carrier that moves over the page. The disc above it hops and squashes."
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.0438447, 0, 0.23102733)
+
+[node name="Disc" type="Sprite3D" parent="Dot" unique_id=388047416]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+modulate = Color(0.40392157, 0.63529414, 0.8666667, 1)
+pixel_size = 0.0021875
+billboard = 1
+alpha_cut = 2
+texture = SubResource("GradientTexture2D_e4jdj")
+
+[node name="Behind" type="Node3D" parent="Dot/Disc" unique_id=1454399952]
+editor_description = "Holds the rim 4 cm behind the disc; at the period, that is 1 cm behind the letters, which then cover its edge. A sprite takes on its parent sprite's modulate, so a plain node holds it."
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.04)
+
+[node name="Rim" type="Sprite3D" parent="Dot/Disc/Behind" unique_id=564098561]
+unique_name_in_owner = true
+editor_description = "Covers all of the disc but a rim once it grows."
+cast_shadow = 0
+pixel_size = 0.0021875
+billboard = 1
+alpha_cut = 2
+texture = SubResource("GradientTexture2D_e4jdj")
+
+[node name="Trail" type="GPUParticles3D" parent="." unique_id=153503066]
+unique_name_in_owner = true
+editor_description = "Lays one ink dot at a steady rate, so the trail doubles as a spacing chart: dense where the dot was slow."
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.0438447, 0.012, 0.23102733)
+cast_shadow = 0
+amount = 1000
+amount_ratio = 0.0
+lifetime = 55.0
+visibility_aabb = AABB(-40, -10, -20, 80, 20, 40)
+process_material = SubResource("ParticleProcessMaterial_5qrw6")
+draw_pass_1 = SubResource("QuadMesh_5kbvh")
+
+[node name="Dust" type="GPUParticles3D" parent="." unique_id=2039987691]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.0438447, 0.03, 0.23102733)
+cast_shadow = 0
+amount = 140
+amount_ratio = 0.0
+lifetime = 0.9
+visibility_aabb = AABB(-40, -10, -20, 80, 20, 40)
+process_material = SubResource("ParticleProcessMaterial_ua1ty")
+draw_pass_1 = SubResource("QuadMesh_g54yp")
+
+[node name="Ripples" type="Node3D" parent="." unique_id=1571414240]
+unique_name_in_owner = true
+
+[node name="Ripple1" type="MeshInstance3D" parent="Ripples" unique_id=1077023459]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.0438447, 0.01, 0.23102733)
+material_override = SubResource("StandardMaterial3D_4g6yh")
+transparency = 1.0
+cast_shadow = 0
+mesh = SubResource("TorusMesh_84rov")
+
+[node name="Ripple2" type="MeshInstance3D" parent="Ripples" unique_id=716465530]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.0438447, 0.01, 0.23102733)
+material_override = SubResource("StandardMaterial3D_4g6yh")
+transparency = 1.0
+cast_shadow = 0
+mesh = SubResource("TorusMesh_84rov")
+
+[node name="Ripple3" type="MeshInstance3D" parent="Ripples" unique_id=1538693621]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.0438447, 0.01, 0.23102733)
+material_override = SubResource("StandardMaterial3D_4g6yh")
+transparency = 1.0
+cast_shadow = 0
+mesh = SubResource("TorusMesh_84rov")
+
+[node name="Overlay" type="CanvasLayer" parent="." unique_id=433359071]
+
+[node name="Fade" type="ColorRect" parent="Overlay" unique_id=133053328]
+unique_name_in_owner = true
+editor_description = "Paper over the view at the loop's seam."
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.9647059, 0.94509804, 0.90588236, 1)
