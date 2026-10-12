@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2026 Moritz Voss
 extends "res://Gallery/GDScript/GalleryAnimation.gd"
-# Scene setup is in Showreel.cs. "Along the Way": a dot travels a page from FROM to the period of TWEENS.GD, and each
+# The scene is Showreel.tscn. "Along the Way": a dot travels a page from FROM to the period of TWEENS.GD, and each
 # word it passes stands up and acts out its name. Every node plays keyframe definitions on one 55-second loop, timed
 # to an 80 bpm track.
 
@@ -168,14 +168,21 @@ func glossary(g: int) -> Dictionary:
 	][g]
 
 ## A page point on a station, in the world.
-func on(station: int, page: Vector3) -> Vector3:
+func on(station: int, point: Vector3) -> Vector3:
 	var node: Node3D = targets.stations[station]
-	return node.transform * page
+	return node.transform * point
+
+## A node's position on its station's page, through the groups it sits in.
+func page(node: Node3D) -> Vector3:
+	var point := node.position
+	var parent := node.get_parent() as Node3D
+	while not targets.stations.has(parent):
+		point = parent.transform * point
+		parent = parent.get_parent() as Node3D
+	return point
 
 func middle(letters: Array) -> float:
-	var first: Node3D = letters[0]
-	var last: Node3D = letters[-1]
-	return (first.position.x + last.position.x) / 2
+	return (page(letters[0]).x + page(letters[-1]).x) / 2
 
 ## Frames that stand a printed node up from the page, hinged at its foot.
 func standing(at: float, easing: int, duration := 0.5) -> Dictionary:
@@ -347,7 +354,7 @@ func route() -> TweensGdKeyframes:
 	var origin := on(0, Vector3(middle(targets.from), 0, 0))
 	var end := on(0, Vector3(middle(targets.to), 0, 0))
 	var ruler := []
-	for tick_mark: Node3D in targets.ticks: ruler.append(on(1, Vector3(tick_mark.position.x, 0, 0)))
+	for tick_mark: Node3D in targets.ticks: ruler.append(on(1, Vector3(page(tick_mark).x, 0, 0)))
 	var frames := {}
 	visit(frames, 0, origin)
 	visit(frames, 8.605, origin)
@@ -362,24 +369,24 @@ func route() -> TweensGdKeyframes:
 	visit(frames, bars(7) + BEAT, ruler[8])
 	# Speeds up into the first hop.
 	var hops: Array = targets.bounce
-	var lift_off := on(2, Vector3(hops[0].position.x - 0.6, 0, 0))
+	var lift_off := on(2, Vector3(page(hops[0]).x - 0.6, 0, 0))
 	visit(frames, (bars(7) + BEAT + takeoff()) / 2, bend(1, ruler[8], lift_off))
 	visit(frames, takeoff(), lift_off)
 	for i in hops.size():
-		visit(frames, landing(i), on(2, Vector3(hops[i].position.x, 0, 0)), Tweens.Interpolation.LINEAR)
-	var off: float = hops[-1].position.x
+		visit(frames, landing(i), on(2, Vector3(page(hops[i]).x, 0, 0)), Tweens.Interpolation.LINEAR)
+	var off := page(hops[-1]).x
 	visit(frames, landing(6), on(2, Vector3(off + 1, 0, 0)), Tweens.Interpolation.LINEAR)
 	var rebound := on(2, Vector3(off + 1.5, 0, 0))
 	visit(frames, landing(6) + EIGHTH, rebound)
 	var springs: Array = targets.elastic
-	var into := on(3, Vector3(springs[0].position.x, 0, 0.35))
-	var past := on(3, Vector3(springs[-1].position.x, 0, 0.35))
+	var into := on(3, Vector3(page(springs[0]).x, 0, 0.35))
+	var past := on(3, Vector3(page(springs[-1]).x, 0, 0.35))
 	visit(frames, (landing(6) + EIGHTH + stretch(0)) / 2, bend(2, rebound, into))
 	visit(frames, stretch(0), into)
 	visit(frames, stretch(6), past, Tweens.Interpolation.LINEAR)
 	# Smooth interpolation curves the path through every diamond.
 	var waypoints := []
-	for diamond_mark: Node3D in targets.diamonds: waypoints.append(on(4, diamond_mark.position))
+	for diamond_mark: Node3D in targets.diamonds: waypoints.append(on(4, page(diamond_mark)))
 	visit(frames, (stretch(6) + waypoint(0)) / 2, bend(3, past, waypoints[0]))
 	for i in waypoints.size(): visit(frames, waypoint(i), waypoints[i])
 	var period: Vector3 = targets.period
@@ -498,7 +505,7 @@ func drop(i: int, shift: float) -> TweensGdKeyframes:
 
 ## Where the dot lands on the page as [time, point]: its drop, the end of BOUNCE, and the period.
 func landings() -> Array:
-	var off: float = targets.bounce[-1].position.x
+	var off := page(targets.bounce[-1]).x
 	return [
 		[bars(1) + EIGHTH, on(0, Vector3(middle(targets.from), 0, 0))], [landing(6), on(2, Vector3(off + 1, 0, 0))],
 		[bars(16), on(5, targets.period)],
@@ -538,8 +545,8 @@ func dust() -> TweensGdKeyframes:
 		key(frames, at, {"amount_ratio": 1.0})
 		key(frames, at + 0.1, {"amount_ratio": 1.0})
 		key(frames, at + 0.12, {"amount_ratio": 0.0})
-	var left := on(5, targets.logo[0].position)
-	var right := on(5, targets.logo[-1].position)
+	var left := on(5, page(targets.logo[0]))
+	var right := on(5, page(targets.logo[-1]))
 	key(frames, 46.055, {"x": left.x, "z": left.z})
 	key(frames, 46.085, {"amount_ratio": 0.0})
 	key(frames, 46.105, {"amount_ratio": 1.0})

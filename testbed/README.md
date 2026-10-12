@@ -3,9 +3,9 @@
 The gallery app: twelve pages and 36 examples, each written in C# and in GDScript. A switch in the header picks the
 implementation that runs, and the source viewer shows the code that is running. Its tests compare the two languages.
 
-The gallery is a .NET app in both modes. Scenes are built by shared C# code, so geometry, materials and initial values
-are identical; only the animations, sequencing, callbacks and button handling differ. The non-.NET GDScript test
-project is `../testbed-gdscript/`.
+The gallery is a .NET app in both modes. Both languages share each example's scene, built by C# code or, for the
+showreel, loaded from a `.tscn`, so geometry, materials and initial values are identical; only the animations,
+sequencing, callbacks and button handling differ. The non-.NET GDScript test project is `../testbed-gdscript/`.
 
 ## Run
 
@@ -68,6 +68,9 @@ dotnet run --project testbed/testbed.2dog -- --gallery-snapshots artifacts/galle
   animation and resources), the source viewer, theme and palette.
 - `Gallery/<Page>/` holds a page's `<Page>Page.cs` and, per example, `<Example>.cs` (the scene, plus `SceneTargets`,
   the nodes handed to GDScript) and `<Example>.Animation.cs` (the C# animation).
+- `Gallery/Showreel/Showreel.tscn` is the showreel's authored scene: page, stations, words, dot, effects and
+  environment. Its `Lettering` and `Definition` nodes lay out their letters and words in the editor as well, and
+  `Showreel.cs` finds the nodes the animation moves.
 - `Gallery/GDScript/<Example>.gd` is the GDScript animation. It extends `GalleryAnimation.gd`, which holds the shared
   lifecycle and bindings, and carries the small helpers it uses (such as `cycle` or `options`) so that the file shows
   everything that moves.

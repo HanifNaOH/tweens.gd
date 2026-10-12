@@ -44,6 +44,11 @@ public abstract partial class GalleryEffect
         return new Scene3D(view, camera, sun, environment);
     }
 
+    /// <summary>A 3D viewport over the stage showing an authored scene, which brings its own environment, camera and
+    /// lights.</summary>
+    protected T World<T>(string path) where T : Node
+        => Viewport(spatial: true).Add(Own(GD.Load<PackedScene>(path)).Instantiate<T>());
+
     private SubViewport Viewport(bool spatial)
     {
         var container = Stage.Add(new SubViewportContainer { Stretch = true, MouseFilter = Control.MouseFilterEnum.Ignore });
