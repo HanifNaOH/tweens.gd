@@ -20,6 +20,8 @@ extends "catalog.gd"
 
 ## Timing, mode, state, and completion-reason constants.
 const Types = preload("types.gd")
+const Layout = preload("layout.gd")
+const LayoutItem = preload("layout_item.gd")
 ## Samples easing curves. C# equivalent: [code]tweens.gd.Easing[/code].
 const Easing = preload("easing.gd")
 ## Creates deterministic progress-to-offset functions. C# equivalent: [code]Tweens.FX[/code].
@@ -174,3 +176,12 @@ static func group(members: Variant) -> TweensGdGroup:
 ## C# equivalent: [code]owner.CancelTweens(includeChildren)[/code].
 static func cancel_tweens(owner: Node, include_children: bool = false) -> void:
 	TweensGdRunner.cancel_tweens(owner, include_children)
+
+## Creates a reusable Tween Layout controller for a Control root. Direct-child slots with a matching visual wrapper are discovered.
+static func create_layout(root: Control, options: TweensGdLayoutOptions = null) -> TweensGdLayout:
+	return Layout.new(root, options)
+
+## Creates a reusable Tween Layout controller from explicit layout-slot and visual-wrapper pairs.
+static func create_layout_from_items(root: Control, items: Array[TweensGdLayoutItem],
+		options: TweensGdLayoutOptions = null) -> TweensGdLayout:
+	return Layout.new(root, options, items)

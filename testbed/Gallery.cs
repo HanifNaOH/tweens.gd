@@ -25,6 +25,7 @@ public partial class Gallery : Control
         ("Easing", () => new EasingPage()),
         ("Colors", () => new ColorsPage()),
         ("Keyframes", () => new KeyframesPage()),
+        ("Layout transitions", () => new LayoutTransitionsPage()),
         ("Showreel", () => new ShowreelPage()),
     ];
 

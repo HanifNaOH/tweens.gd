@@ -40,6 +40,7 @@ export const PATH = [
 		collapsed: true,
 		pages: [
 			{ slug: 'sequences', label: 'Sequences' },
+			{ slug: 'layout-transitions', label: 'Layout transitions' },
 			{ slug: 'keyframes', label: 'Keyframes' },
 			{ slug: 'loops', label: 'Loops & delays' },
 			{ slug: 'variations', label: 'Variations' },

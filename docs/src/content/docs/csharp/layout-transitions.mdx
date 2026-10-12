@@ -1,0 +1,117 @@
+---
+title: Layout transitions
+description: Animate persistent Control visuals between their old and new Container-managed layout bounds.
+tableOfContents: true
+---
+
+import LayoutDemo from '../../../components/LayoutDemo.astro';
+
+Godot Containers own the position and size of their children, so tweening a slot directly fights the layout system. A layout controller leaves each slot under Container control and animates a child `Control` named `Visual` from its old bounds to the slot's new bounds.
+
+<LayoutDemo />
+
+The demo's `PatternGrid` is a project-defined `Container`: its `SetPattern()` method changes the four slots' arrangement. Each slot has a direct-child `Visual` that fills it.
+
+## Set up
+
+Make the controller root a `Control` Container. Each direct-child `Control` is a slot, with a direct-child `Control` named `Visual` that fills it:
+
+```text
+VBoxContainer (root)
+  Control (slot)
+    Control (Visual)
+      ... visible content ...
+  Control (slot)
+    Control (Visual)
+      ... visible content ...
+```
+
+Create the controller after the tree is ready, then mutate the Container's children inside `Update()`:
+
+```csharp
+using System;
+using Godot;
+using tweens.gd;
+
+public partial class RowList : Control
+{
+    private VBoxContainer rows = null!;
+    private LayoutController layout = null!;
+
+    public override void _Ready()
+    {
+        rows = GetNode<VBoxContainer>("%Rows");
+        layout = Tweens.CreateLayout(rows, new LayoutOptions
+        {
+            Duration = 0.4,
+            Ease = Out.Cubic,
+            StaggerEach = 0.025,
+        });
+    }
+
+    private async void MoveFirstToEnd()
+    {
+        var transition = layout.Update(_ =>
+            rows.MoveChild(rows.GetChild(0), rows.GetChildCount() - 1));
+        try
+        {
+            var reason = await transition.End;
+            if (reason != Reason.Completed) GD.Print($"Layout ended: {reason}");
+        }
+        catch (Exception error)
+        {
+            GD.PushError(error.Message);
+        }
+    }
+}
+```
+
+`Update()` captures the old visual bounds, calls the mutation immediately, and waits for the Container to settle before animating. `End` completes with a `Reason`; it faults with an exception when setup, mutation, or reflow fails.
+
+## Discovery
+
+`Tweens.CreateLayout(root, options)` discovers only direct-child `Control` slots under `root`. By default, each slot's direct child named `Visual` is animated. Set `VisualPath` on the controller's options to use a different direct-child name.
+
+For slots elsewhere below the root, provide explicit pairs:
+
+```csharp
+var items = new[]
+{
+    new LayoutItem(firstSlot, firstVisual),
+    new LayoutItem(secondSlot, secondVisual),
+};
+var layout = Tweens.CreateLayoutFromItems(root, items);
+```
+
+Each visual must be a direct child of its slot; each slot must be inside the root. Slots and visuals must be in the tree and share a viewport and canvas. Before every update, the visual must fill its slot, have zero rotation and pivot offset, and have unit scale.
+
+Only items present before the mutation and still paired with the same slot are animated. New, removed, or replaced items are not interpolated by that update.
+
+## Options
+
+| Member        | Type              | Default        | Meaning                                              |
+| ------------- | ----------------- | -------------- | ---------------------------------------------------- |
+| `Duration`    | `Duration`        | `0.35` seconds | Position and size tween duration                     |
+| `Delay`       | `Duration`        | `0`            | Delay before the first item starts                   |
+| `Ease`        | `EaseType`        | `Out.Quad`     | Position easing                                      |
+| `SizeEase`    | `EaseType?`       | `null`         | Size easing; uses `Ease` when unset                  |
+| `StaggerEach` | `double`          | `0`            | Additional delay per item in current layout order    |
+| `Playback`    | `PlaybackOptions` | default        | Playback policy                                      |
+| `VisualPath`  | `NodePath`        | `Visual`       | Direct-child visual name used by automatic discovery |
+
+Pass options to `CreateLayout()` for controller defaults. Passing `transitionOptions` to `Update()` replaces those defaults for that update; it is not a partial merge. Automatic discovery always uses the controller's `VisualPath`. Options are copied when the controller is created and when an update starts.
+
+## Control and completion
+
+| Member                                     | Meaning                                                                   |
+| ------------------------------------------ | ------------------------------------------------------------------------- |
+| `layout.Update(change, transitionOptions)` | Run one mutation and return its `LayoutTransition`                        |
+| `layout.IsActive`                          | True while an update is in progress; a second overlapping update faults   |
+| `transition.Pause()` / `Resume()`          | Pause or resume the position and size tweens                              |
+| `transition.Cancel()`                      | Cancel the tweens and settle surviving visuals at their final slot bounds |
+| `transition.IsTerminal` / `IsPaused`       | Completion and pause state                                                |
+| `transition.CompletionReason`              | Terminal `Reason`, or `null` while running                                |
+| `transition.End`                           | Await a `Task<Reason>`; faults on a failed update                         |
+| `transition.Error`                         | The exception that faulted `End`, if any                                  |
+
+The controller holds the old visual bounds while the Container reflows. It waits for two consecutive stable layout frames, up to 12 process frames. If layout does not stabilize, `End` faults with a `TimeoutException`. If the root leaves the tree, it completes with `Reason.OwnerExited`. Cancellation does not roll the Container mutation back; it places surviving visuals at their final slots.

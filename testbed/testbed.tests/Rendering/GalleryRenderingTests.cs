@@ -73,6 +73,7 @@ public class GalleryRenderingTests
     [InlineData(9, GalleryLanguage.CSharp)] [InlineData(9, GalleryLanguage.GDScript)]
     [InlineData(10, GalleryLanguage.CSharp)] [InlineData(10, GalleryLanguage.GDScript)]
     [InlineData(11, GalleryLanguage.CSharp)] [InlineData(11, GalleryLanguage.GDScript)]
+    [InlineData(12, GalleryLanguage.CSharp)] [InlineData(12, GalleryLanguage.GDScript)]
     public void EachPagePlaysAndReleasesItsNativeScene(int index, GalleryLanguage language)
     {
         var gallery = new Gallery(); godot.Tree.Root.AddChild(gallery);
@@ -112,6 +113,8 @@ public class GalleryRenderingTests
                 Assert.True(view.Code.Size.X > 0 && view.Code.Size.Y > 0);
             }
             gallery.RestartPage();
+            if (index == 11)
+                for (var frame = 0; frame < 3 && !animation.IsCompleted; frame++) godot.Engine.Iteration();
             Assert.True(animation.IsCompletedSuccessfully);
             Assert.False(GodotObject.IsInstanceValid(page));
             for (var i = 0; i < 3; i++) godot.Engine.Iteration();

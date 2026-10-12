@@ -32,7 +32,7 @@ public class GalleryLifetimeTests
     [InlineData(nameof(TextReveal))] [InlineData(nameof(ScrollingList))] [InlineData(nameof(RangeMeter))]
     [InlineData(nameof(OffsetTransforms))] [InlineData(nameof(GlowingRibbon))] [InlineData(nameof(LightSweep))]
     [InlineData(nameof(ColorInterpolation))]
-    [InlineData(nameof(KeyframeFlight))] [InlineData(nameof(Showreel))]
+    [InlineData(nameof(KeyframeFlight))] [InlineData(nameof(LayoutMorph))] [InlineData(nameof(Showreel))]
     [InlineData(nameof(ParticleStream))] [InlineData(nameof(PolygonEchoes))] [InlineData(nameof(CameraLens))]
     [InlineData(nameof(CurveFollower3D))] [InlineData(nameof(ParentedRotation))] [InlineData(nameof(Spotlight))]
     [InlineData(nameof(AlbedoFade))] [InlineData(nameof(EmissionPulse))] [InlineData(nameof(SharedMaterial))]
@@ -58,6 +58,8 @@ public class GalleryLifetimeTests
                 for (var i = 0; i < updates; i++) scheduler.Update(0.05);
                 Assert.False(sequence.IsFaulted);
                 stage.Free();
+                if (name == nameof(LayoutMorph))
+                    for (var frame = 0; frame < 3 && !sequence.IsCompleted; frame++) godot.Engine.Iteration();
                 Assert.True(sequence.IsCompletedSuccessfully);
                 scheduler.Update(5);
                 Assert.Equal(0, scheduler.ActiveCount);

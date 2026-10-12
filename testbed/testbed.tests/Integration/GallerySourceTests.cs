@@ -18,7 +18,7 @@ public class GallerySourceTests(HeadlessFixture godot)
     {
         var types = typeof(GalleryEffect).Assembly.GetTypes()
             .Where(t => t.IsSubclassOf(typeof(GalleryEffect)) && !t.IsAbstract && !t.IsNested).ToArray();
-        Assert.Equal(36, types.Length);
+        Assert.Equal(37, types.Length);
         foreach (var type in types)
         {
             var effect = (GalleryEffect)Activator.CreateInstance(type)!;
@@ -29,7 +29,8 @@ public class GallerySourceTests(HeadlessFixture godot)
             Assert.EndsWith(type.Name + ".cs", setup.Path);
             Assert.Contains("public sealed partial class " + type.Name, animation.Text);
             Assert.Contains("public sealed partial class " + type.Name, setup.Text);
-            Assert.Contains(".Tween", animation.Text);
+            Assert.True(animation.Text.Contains(".Tween", StringComparison.Ordinal)
+                || animation.Text.Contains(".Update(", StringComparison.Ordinal));
             Assert.Contains("async Task", animation.Text);
             foreach (var hidden in new[] { "Play(", "Keep(", "TrackTweens(", "Generation", "protected override void Build(", "IEnumerable<TweenInstance>", "yield return" })
                 Assert.DoesNotContain(hidden, animation.Text);

@@ -15,6 +15,7 @@ const ShaderTests = preload("shader_tests.gd")
 const CoordinationTests = preload("coordination_tests.gd")
 const FXTests = preload("fx_tests.gd")
 const KeyframeTests = preload("keyframe_tests.gd")
+const LayoutTests = preload("layout_tests.gd")
 
 var finished := false
 var trace_runs := false
@@ -110,6 +111,7 @@ func run_tests() -> void:
 	check(await ShaderTests.new().run(self), "shader suite returned normally")
 	check(await CoordinationTests.new().run(self), "coordination suite returned normally")
 	await _automatic_runner()
+	check(await LayoutTests.new().run(self) == true, "layout suite returned normally")
 	await _rejected_starts()
 	failures.append_array(_collector.take_errors())
 	OS.remove_logger(_collector)

@@ -59,6 +59,8 @@ public class GalleryLanguageTests
                     button.EmitSignal(BaseButton.SignalName.Pressed);
                 }
             }
+            if (name == nameof(LayoutMorph))
+                for (var frame = 0; frame < 12 && GDScriptScheduler() is null; frame++) godot.Engine.Iteration();
             var gdScheduler = GDScriptScheduler();
             Assert.NotNull(gdScheduler);
             Assert.Equal(name == nameof(JellyButton), gdscript.Sequence!.IsCompleted);
@@ -72,6 +74,8 @@ public class GalleryLanguageTests
             }
             first.Free();
             second.Free();
+            if (name == nameof(LayoutMorph))
+                for (var frame = 0; frame < 3 && (!csharp.Sequence!.IsCompleted || !gdscript.Sequence!.IsCompleted); frame++) godot.Engine.Iteration();
             Assert.True(csharp.Sequence!.IsCompletedSuccessfully);
             Assert.True(gdscript.Sequence!.IsCompletedSuccessfully);
             Assert.Equal(0, scheduler.ActiveCount);

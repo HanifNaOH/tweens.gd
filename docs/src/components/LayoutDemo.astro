@@ -1,0 +1,316 @@
+---
+// Four Grid arrangements, with FLIP transforms between each pair of layouts.
+import type { Lang } from '../scripts/lang';
+import ReducedMotionNotice from './ReducedMotionNotice.astro';
+
+interface Props {
+	lang?: Lang;
+}
+const { lang = 'csharp' } = Astro.props;
+---
+
+<div class="tw-widget ld not-content" data-layout-demo data-motion-demo data-code-lang={lang}>
+	<ReducedMotionNotice />
+	<div class="ld-head">
+		<div>
+			<p class="ld-kicker">CONTAINER REFLOW <span aria-hidden="true">/</span> FLIP</p>
+			<h3>One set of items, four layouts</h3>
+		</div>
+		<output data-current aria-live="polite">LAYOUT 01 <span>/ 04</span></output>
+	</div>
+
+	<div class="ld-stage" data-grid="1" aria-label="Four colored items rearrange between four grid layouts">
+		<div class="ld-item item-a" data-item><span>A</span><b>EMBER</b></div>
+		<div class="ld-item item-b" data-item><span>B</span><b>TIDE</b></div>
+		<div class="ld-item item-c" data-item><span>C</span><b>LEAF</b></div>
+		<div class="ld-item item-d" data-item><span>D</span><b>INK</b></div>
+	</div>
+
+	<div class="ld-controls" aria-label="Layout demo controls">
+		<div class="ld-states" role="group" aria-label="Choose a layout">
+			{[1, 2, 3, 4].map((state) => (
+				<button type="button" data-state={state} aria-label={`Show layout ${state}`} aria-pressed={state === 1}>
+					<span>0{state}</span>
+				</button>
+			))}
+		</div>
+		<button type="button" class="ld-play" data-play aria-pressed="true">
+			<svg viewBox="0 0 16 16" aria-hidden="true"><path data-play-icon d="M5 3.5v9l7-4.5z"/><path data-pause-icon d="M5 3.5h2.2v9H5zm3.8 0H11v9H8.8z"/></svg>
+			<span data-play-label>Pause cycle</span>
+		</button>
+	</div>
+
+	<pre class="ld-code"><code>{lang === 'gdscript' ? `var options := TweensGdLayoutOptions.new()
+options.duration = 1.0
+options.stagger_each = 0.15
+options.ease = Out.CUBIC
+var layout := Tweens.create_layout(%Grid, options)
+var pattern := 1
+
+func advance_pattern() -> void:
+    pattern = pattern % 4 + 1
+    var transition := layout.update(func(_root: Control) -> void:
+        %Grid.set_pattern(pattern)
+    )
+	await transition.end` : `var options = new LayoutOptions
+{
+	Duration = 1.0,
+	StaggerEach = 0.15,
+	Ease = Out.Cubic,
+};
+var layout = Tweens.CreateLayout(Grid, options);
+var pattern = 1;
+
+async Task AdvancePattern()
+{
+    pattern = pattern % 4 + 1;
+    var transition = layout.Update(_ => Grid.SetPattern(pattern));
+    await transition.End;
+}`}</code></pre>
+	<p class="ld-note">Each update changes Container-owned slot bounds. The addon holds the old visual bounds, waits for reflow, then animates each <code>Visual</code> wrapper.</p>
+	<p class="sr-only" aria-live="polite" data-announce></p>
+</div>
+
+<script>
+	import { loop, reducedMotion } from '../scripts/motion';
+
+	const DURATION = 900;
+	const STAGGER = 125;
+	const REST = 1.5;
+	const EASING = 'cubic-bezier(0.215, 0.61, 0.355, 1)';
+
+	for (const root of document.querySelectorAll<HTMLElement>('[data-layout-demo]')) {
+		const stage = root.querySelector<HTMLElement>('.ld-stage')!;
+		const items = [...root.querySelectorAll<HTMLElement>('[data-item]')];
+		const stateButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-state]')];
+		const playButton = root.querySelector<HTMLButtonElement>('[data-play]')!;
+		const playLabel = root.querySelector<HTMLElement>('[data-play-label]')!;
+		const current = root.querySelector<HTMLOutputElement>('[data-current]')!;
+		const announce = root.querySelector<HTMLElement>('[data-announce]')!;
+		let state = 1;
+		let playing = true;
+		let transitioning = false;
+		let nextAt = REST;
+		let pendingState: number | null = null;
+
+		const reflect = () => {
+			stateButtons.forEach((button) => button.setAttribute('aria-pressed', String(Number(button.dataset.state) === state)));
+			current.innerHTML = `LAYOUT 0${state} <span>/ 04</span>`;
+			playButton.setAttribute('aria-pressed', String(playing));
+			playLabel.textContent = playing ? 'Pause cycle' : 'Play cycle';
+			root.dataset.playing = String(playing);
+		};
+
+		const goTo = async (next: number) => {
+			if (next === state) return;
+			if (transitioning) {
+				pendingState = next;
+				return;
+			}
+			transitioning = true;
+			items.forEach((item) => item.getAnimations().forEach((animation) => animation.cancel()));
+			const first = items.map((item) => item.getBoundingClientRect());
+			stage.dataset.grid = String(next);
+			state = next;
+			reflect();
+			const animations = items.map((item, index) => {
+				const before = first[index];
+				const after = item.getBoundingClientRect();
+				const x = before.left - after.left;
+				const y = before.top - after.top;
+				const sx = before.width / after.width;
+				const sy = before.height / after.height;
+				return item.animate(
+					[
+						{ transformOrigin: 'top left', transform: `translate(${x}px, ${y}px) scale(${sx}, ${sy})` },
+						{ transformOrigin: 'top left', transform: 'none' },
+					],
+					{ duration: DURATION, delay: index * STAGGER, easing: EASING, fill: 'both' },
+				);
+			});
+			await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)));
+			animations.forEach((animation) => animation.cancel());
+			transitioning = false;
+			announce.textContent = `Layout ${next} of 4.`;
+			if (pendingState !== null) {
+				const requested = pendingState;
+				pendingState = null;
+				void goTo(requested);
+			}
+		};
+
+		stateButtons.forEach((button) => button.addEventListener('click', () => void goTo(Number(button.dataset.state))));
+		playButton.addEventListener('click', () => {
+			playing = !playing;
+			nextAt = 0;
+			reflect();
+		});
+		reflect();
+
+		loop(root, (seconds) => {
+			if (!playing || transitioning || seconds < nextAt || reducedMotion(root)) return;
+			nextAt = seconds + DURATION / 1000 + STAGGER * (items.length - 1) / 1000 + REST;
+			void goTo(state % 4 + 1);
+		});
+	}
+</script>
+
+<style>
+	.ld {
+		--ld-gap: clamp(0.45rem, 1.3cqw, 0.8rem);
+		padding: clamp(1rem, 3cqw, 1.5rem);
+		container-type: inline-size;
+		background:
+			linear-gradient(135deg, color-mix(in oklab, var(--tw-mint) 8%, transparent), transparent 48%),
+			var(--tw-stage);
+	}
+	.ld-head {
+		display: flex;
+		align-items: end;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 1rem;
+	}
+	.ld-kicker {
+		margin: 0 0 0.3rem;
+		color: var(--tw-mint-ink);
+		font: 700 0.65rem/1.3 var(--sl-font-mono);
+	}
+	.ld-kicker span { color: var(--tw-muted); }
+	.ld-head h3 {
+		margin: 0;
+		font-size: 1.2rem;
+		line-height: 1.25;
+	}
+	.ld-head output {
+		flex: 0 0 auto;
+		color: var(--tw-text);
+		font: 700 0.72rem/1.2 var(--sl-font-mono);
+		font-variant-numeric: tabular-nums;
+	}
+	.ld-head output span { color: var(--tw-muted); }
+	.ld-stage {
+		width: min(100%, 42rem);
+		aspect-ratio: 1.72;
+		margin-inline: auto;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		grid-template-rows: repeat(3, 1fr);
+		gap: var(--ld-gap);
+		padding: var(--ld-gap);
+		border: 1px solid var(--tw-outline);
+		background:
+			linear-gradient(to right, var(--tw-grid) 1px, transparent 1px) 0 0 / 50% 100%,
+			linear-gradient(to bottom, var(--tw-grid) 1px, transparent 1px) 0 0 / 100% 33.333%,
+			var(--tw-bg);
+	}
+	.ld-item {
+		min-width: 0;
+		min-height: 0;
+		display: flex;
+		align-items: end;
+		justify-content: space-between;
+		gap: 0.4rem;
+		padding: clamp(0.55rem, 2.2cqw, 1rem);
+		border: 1px solid color-mix(in oklab, white 24%, transparent);
+		color: #10202a;
+		box-shadow: 0 8px 20px rgb(3 8 14 / 0.2);
+	}
+	.ld-item > span {
+		align-self: start;
+		font: 700 clamp(1.2rem, 4cqw, 2.4rem)/1 var(--sl-font-mono);
+	}
+	.ld-item b {
+		font: 700 clamp(0.56rem, 1.6cqw, 0.76rem)/1 var(--sl-font-mono);
+		letter-spacing: 0;
+	}
+	.item-a { background: var(--tw-amber); }
+	.item-b { background: var(--tw-blue); }
+	.item-c { background: var(--tw-mint); }
+	.item-d { background: var(--tw-rose); }
+
+	.ld-stage[data-grid='1'] .item-a { grid-column: 1; grid-row: 1 / 3; }
+	.ld-stage[data-grid='1'] .item-b { grid-column: 2; grid-row: 1; }
+	.ld-stage[data-grid='1'] .item-c { grid-column: 1; grid-row: 3; }
+	.ld-stage[data-grid='1'] .item-d { grid-column: 2; grid-row: 2 / 4; }
+
+	.ld-stage[data-grid='2'] { grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr; }
+	.ld-stage[data-grid='2'] .item-a,
+	.ld-stage[data-grid='2'] .item-d { grid-row: 1 / 3; }
+
+	.ld-stage[data-grid='3'] .item-d { grid-column: 1; grid-row: 1; }
+	.ld-stage[data-grid='3'] .item-c { grid-column: 2; grid-row: 1 / 3; }
+	.ld-stage[data-grid='3'] .item-b { grid-column: 1; grid-row: 2 / 4; }
+	.ld-stage[data-grid='3'] .item-a { grid-column: 2; grid-row: 3; }
+
+	.ld-stage[data-grid='4'] { grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr; }
+	.ld-stage[data-grid='4'] .item-a { grid-column: 1; grid-row: 1; }
+	.ld-stage[data-grid='4'] .item-b { grid-column: 1; grid-row: 2; }
+	.ld-stage[data-grid='4'] .item-c,
+	.ld-stage[data-grid='4'] .item-d { grid-row: 1 / 3; }
+
+	.ld-controls {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-top: 1rem;
+	}
+	.ld-states { display: flex; gap: 0.35rem; }
+	.ld-states button,
+	.ld-play {
+		min-height: 2.4rem;
+		border: 1px solid var(--tw-outline);
+		border-radius: 0.35rem;
+		background: var(--tw-surface);
+		color: var(--tw-soft);
+		font: 700 0.75rem/1 var(--sl-font-mono);
+		cursor: pointer;
+	}
+	.ld-states button { min-width: 2.8rem; }
+	.ld-states button[aria-pressed='true'] {
+		border-color: var(--tw-mint);
+		background: var(--tw-selected);
+		color: var(--tw-mint-ink);
+	}
+	.ld-states button:hover,
+	.ld-play:hover { border-color: var(--tw-muted); color: var(--tw-text); }
+	.ld-play {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		padding: 0 0.75rem;
+		color: var(--tw-text);
+	}
+	.ld-play svg { width: 0.9rem; height: 0.9rem; fill: currentColor; }
+	.ld-play [data-pause-icon],
+	.ld[data-playing='true'] .ld-play [data-play-icon] { display: none; }
+	.ld[data-playing='true'] .ld-play [data-pause-icon] { display: initial; }
+	.ld-code {
+		margin: 1rem 0 0;
+		padding: 0.85rem 1rem;
+		overflow-x: auto;
+		border: 1px solid var(--tw-outline);
+		background: color-mix(in oklab, var(--tw-bg) 82%, transparent);
+		color: var(--tw-text);
+		font: 0.73rem/1.65 var(--sl-font-mono);
+		tab-size: 4;
+	}
+	.ld-note {
+		margin: 0.7rem 0 0;
+		color: var(--tw-muted);
+		font-size: 0.78rem;
+		line-height: 1.5;
+	}
+	.ld-note code { color: var(--tw-mint-ink); }
+	@media (max-width: 28rem) {
+		.ld-head { align-items: start; }
+		.ld-head h3 { max-width: 13rem; font-size: 1.05rem; }
+		.ld-item { flex-direction: column; align-items: start; justify-content: space-between; }
+		.ld-controls { align-items: stretch; }
+		.ld-states { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); flex: 1; }
+		.ld-states button { min-width: 0; }
+		.ld-play { padding-inline: 0.55rem; }
+	}
+</style>
