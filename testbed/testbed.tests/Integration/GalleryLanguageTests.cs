@@ -65,7 +65,9 @@ public class GalleryLanguageTests
             Assert.NotNull(gdScheduler);
             Assert.Equal(name == nameof(JellyButton), gdscript.Sequence!.IsCompleted);
             // Binary-exact deltas keep endpoint comparisons independent of accumulated decimal roundoff.
-            for (var tick = 0; tick < 384; tick++)
+            // At this tempo, 64 seconds covers two showreel loops, including every scene and the reset.
+            var samples = name == nameof(Showreel) ? 4096 : 384;
+            for (var tick = 0; tick < samples; tick++)
             {
                 scheduler.Update(1.0 / 64);
                 gdScheduler!.Call("update", 1.0 / 64);
@@ -154,6 +156,80 @@ public class GalleryLanguageTests
         finally { gallery.Free(); }
         Pump();
         Assert.Equal(0, GDScriptScheduler()!.Get("active_count").AsInt32());
+        Assert.Empty(godot.Errors.Drain());
+    }
+
+    [Theory]
+    [InlineData(-1.0)]
+    [InlineData(1.0)]
+    public void ShowreelCueMovesItsLettersAndDefinitionTogetherAcrossLoops(double shift)
+    {
+        var first = new Control { Size = new Vector2(600, 300) };
+        var second = new Control { Size = new Vector2(600, 300) };
+        godot.Tree.Root.AddChild(first);
+        godot.Tree.Root.AddChild(second);
+        var csharp = new Showreel();
+        var gdscript = new Showreel();
+        csharp.Attach(first);
+        gdscript.Attach(second, GalleryLanguage.GDScript);
+        Pump();
+        var source = GallerySource.ForEffect(gdscript, GalleryLanguage.GDScript);
+        var delta = shift.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        using var animation = new GalleryGDScript(source with
+        {
+            Text = source.Text.Replace("from_to(bars(2))", $"from_to(bars(2) + {delta})", StringComparison.Ordinal),
+        });
+        try
+        {
+            // Start only the moved C# beat; the GDScript timeline uses the same edited cue.
+            csharp.Start(1.8);
+            var scheduler = TweenRuntime.GetRunner(first).Scheduler;
+            scheduler.CancelAll();
+            var cue = 7.105 + shift;
+            var scene = Assert.IsAssignableFrom<Task>(typeof(Showreel)
+                .GetMethod("FromToAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                .Invoke(csharp, [cue]));
+            animation.Start(second, gdscript.SceneTargets, 1.8);
+            var gdScheduler = GDScriptScheduler()!;
+            var elapsed = 0.0;
+            foreach (var loop in new[] { 0.0, 55.0 })
+            {
+                foreach (var offset in new[] { -0.25, 0.5, 3.875 })
+                {
+                    var time = loop + cue + offset;
+                    scheduler.Update(time - elapsed);
+                    gdScheduler.Call("update", time - elapsed);
+                    elapsed = time;
+                    var left = csharp.SceneTargets;
+                    var right = gdscript.SceneTargets;
+                    foreach (var key in new[] { "from", "to", "glosses" })
+                    {
+                        // Other definitions belong to scenes not started on the C# side.
+                        if (key == "glosses") Compare(left[key].AsGodotArray()[0], right[key].AsGodotArray()[0], "Showreel.gloss", 0);
+                        else Compare(left[key], right[key], "Showreel." + key, 0);
+                    }
+                    var letter = left[offset == 3.875 ? "to" : "from"].AsGodotArray()[0].As<Label3D>();
+                    Assert.InRange(Math.Abs(letter.RotationDegrees.X - (offset < 0 ? -90 : 0)), 0, 0.003);
+                    if (offset == 0.5)
+                    {
+                        var word = left["glosses"].AsGodotArray()[0].AsGodotDictionary()["words"].AsGodotArray()[0].As<Label3D>();
+                        Assert.True(word.Transparency < 0.9);
+                    }
+                }
+            }
+            first.Free();
+            second.Free();
+            Assert.True(scene.IsCompletedSuccessfully);
+            Assert.True(animation.Completion.IsCompletedSuccessfully);
+        }
+        finally
+        {
+            if (GodotObject.IsInstanceValid(first)) first.Free();
+            if (GodotObject.IsInstanceValid(second)) second.Free();
+            csharp.ReleaseResources();
+            gdscript.ReleaseResources();
+        }
+        Pump();
         Assert.Empty(godot.Errors.Drain());
     }
 
