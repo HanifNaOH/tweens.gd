@@ -162,7 +162,7 @@ public class GalleryLanguageTests
     [Theory]
     [InlineData(-1.0)]
     [InlineData(1.0)]
-    public void ShowreelCueMovesItsLettersAndDefinitionTogetherAcrossLoops(double shift)
+    public void ShowreelCueMovesItsSceneTogetherAcrossLoops(double shift)
     {
         var first = new Control { Size = new Vector2(600, 300) };
         var second = new Control { Size = new Vector2(600, 300) };
@@ -173,41 +173,38 @@ public class GalleryLanguageTests
         csharp.Attach(first);
         gdscript.Attach(second, GalleryLanguage.GDScript);
         Pump();
+        const System.Reflection.BindingFlags hidden = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var cues = (System.Collections.IDictionary)typeof(Showreel).GetField("cues", hidden)!.GetValue(csharp)!;
+        var fromTo = Enum.Parse(typeof(Showreel).GetNestedType("Scene", System.Reflection.BindingFlags.NonPublic)!, "FromTo");
+        var cue = (double)cues[fromTo]! + shift;
+        cues[fromTo] = cue;
         var source = GallerySource.ForEffect(gdscript, GalleryLanguage.GDScript);
         var delta = shift.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        Assert.Contains("Scene.FROM_TO: bars(2),", source.Text, StringComparison.Ordinal);
         using var animation = new GalleryGDScript(source with
         {
-            Text = source.Text.Replace("from_to(bars(2))", $"from_to(bars(2) + {delta})", StringComparison.Ordinal),
+            Text = source.Text.Replace("Scene.FROM_TO: bars(2),", $"Scene.FROM_TO: bars(2) + {delta},", StringComparison.Ordinal),
         });
         try
         {
-            // Start only the moved C# beat; the GDScript timeline uses the same edited cue.
             csharp.Start(1.8);
-            var scheduler = TweenRuntime.GetRunner(first).Scheduler;
-            scheduler.CancelAll();
-            var cue = 7.105 + shift;
-            var scene = Assert.IsAssignableFrom<Task>(typeof(Showreel)
-                .GetMethod("FromToAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
-                .Invoke(csharp, [cue]));
             animation.Start(second, gdscript.SceneTargets, 1.8);
+            var scheduler = TweenRuntime.GetRunner(first).Scheduler;
             var gdScheduler = GDScriptScheduler()!;
             var elapsed = 0.0;
             foreach (var loop in new[] { 0.0, 55.0 })
             {
-                foreach (var offset in new[] { -0.25, 0.5, 3.875 })
+                var rest = new Dictionary<double, Vector3>();
+                foreach (var offset in new[] { -0.25, 0.5, 1.0, 1.4, 3.875, 4.6, 5.0 })
                 {
                     var time = loop + cue + offset;
                     scheduler.Update(time - elapsed);
                     gdScheduler.Call("update", time - elapsed);
                     elapsed = time;
                     var left = csharp.SceneTargets;
-                    var right = gdscript.SceneTargets;
-                    foreach (var key in new[] { "from", "to", "glosses" })
-                    {
-                        // Other definitions belong to scenes not started on the C# side.
-                        if (key == "glosses") Compare(left[key].AsGodotArray()[0], right[key].AsGodotArray()[0], "Showreel.gloss", 0);
-                        else Compare(left[key], right[key], "Showreel." + key, 0);
-                    }
+                    Compare(left, gdscript.SceneTargets, "Showreel", 0);
+                    rest[offset] = left["dot"].As<Node3D>().Position;
+                    if (offset is 1.0 or 1.4 or 4.6 or 5.0) continue;
                     var letter = left[offset == 3.875 ? "to" : "from"].AsGodotArray()[0].As<Label3D>();
                     Assert.InRange(Math.Abs(letter.RotationDegrees.X - (offset < 0 ? -90 : 0)), 0, 0.003);
                     if (offset == 0.5)
@@ -216,10 +213,14 @@ public class GalleryLanguageTests
                         Assert.True(word.Transparency < 0.9);
                     }
                 }
+                // The dot rests at FROM until two beats after the cue, and at TO once it has walked there.
+                Assert.InRange(rest[1.0].DistanceTo(rest[1.4]), 0, 0.0001);
+                Assert.InRange(rest[4.6].DistanceTo(rest[5.0]), 0, 0.0001);
+                Assert.True(rest[1.0].DistanceTo(rest[4.6]) > 1);
             }
             first.Free();
             second.Free();
-            Assert.True(scene.IsCompletedSuccessfully);
+            Assert.True(csharp.Sequence!.IsCompletedSuccessfully);
             Assert.True(animation.Completion.IsCompletedSuccessfully);
         }
         finally
@@ -228,6 +229,53 @@ public class GalleryLanguageTests
             if (GodotObject.IsInstanceValid(second)) second.Free();
             csharp.ReleaseResources();
             gdscript.ReleaseResources();
+        }
+        Pump();
+        Assert.Empty(godot.Errors.Drain());
+    }
+
+    [Theory]
+    [InlineData(GalleryLanguage.CSharp)]
+    [InlineData(GalleryLanguage.GDScript)]
+    public void ShowreelReportsACueOutsideTheLoopAsSoonAsItStarts(GalleryLanguage language)
+    {
+        var stage = new Control { Size = new Vector2(600, 300) };
+        godot.Tree.Root.AddChild(stage);
+        var effect = new Showreel();
+        effect.Attach(stage, language);
+        Pump();
+        GalleryGDScript? animation = null;
+        Engine.PrintErrorMessages = false;
+        try
+        {
+            if (language == GalleryLanguage.CSharp)
+            {
+                var cues = (System.Collections.IDictionary)typeof(Showreel)
+                    .GetField("cues", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(effect)!;
+                cues[Enum.Parse(typeof(Showreel).GetNestedType("Scene", System.Reflection.BindingFlags.NonPublic)!, "Closing")] = 54.0;
+                effect.Start(1.8);
+            }
+            else
+            {
+                var source = GallerySource.ForEffect(effect, language);
+                Assert.Contains("Scene.CLOSING: bars(16) + 2 * BEAT,", source.Text, StringComparison.Ordinal);
+                animation = new GalleryGDScript(source with
+                {
+                    Text = source.Text.Replace("Scene.CLOSING: bars(16) + 2 * BEAT,", "Scene.CLOSING: 54.0,", StringComparison.Ordinal),
+                });
+                animation.Start(stage, effect.SceneTargets, 1.8);
+            }
+            // The other scenes loop forever, so the report can't wait for them to end.
+            var errors = godot.Errors.Drain();
+            Assert.NotEmpty(errors);
+            Assert.All(errors, error => Assert.Contains("outside the 55 s loop", error.Text, StringComparison.Ordinal));
+        }
+        finally
+        {
+            Engine.PrintErrorMessages = true;
+            stage.Free();
+            animation?.Dispose();
+            effect.ReleaseResources();
         }
         Pump();
         Assert.Empty(godot.Errors.Drain());

@@ -8,7 +8,8 @@ using System.Threading.Tasks;
 using Godot;
 namespace testbed;
 
-/// <summary>One gallery page: a grid of effect cards. Only the selected page exists at a time.</summary>
+/// <summary>One gallery page: a grid of effect cards. Only the selected page exists at a time. A page that is the
+/// scene Godot runs plays standalone, with the gallery's theme, background and fullscreen.</summary>
 public abstract partial class GalleryPage : VBoxContainer
 {
     private readonly List<Resource> resources = [];
@@ -25,8 +26,15 @@ public abstract partial class GalleryPage : VBoxContainer
     private Label description = null!;
     private StyleBox soloCard = null!, soloStage = null!;
     private readonly List<Control> frames = [];
+    private DisplayServer.WindowMode windowed = DisplayServer.WindowMode.Windowed;
 
-    public GalleryLanguage Language { get; set; }
+    [Export] public GalleryLanguage Language { get; set; }
+    /// <summary>The leg duration a standalone page starts with; the gallery passes its own.</summary>
+    [Export] public double LegDuration { get; set; } = 1.8;
+    /// <summary>The example a standalone page fills its window with from the start, or -1.</summary>
+    [Export] public int SoloOnStart { get; set; } = -1;
+    /// <summary>Whether the page's parent is the root window, so the page hosts itself.</summary>
+    public bool Standalone { get; private set; }
     public IReadOnlyList<GalleryEffect> Effects => effects;
 
     public int SelectedEffect { get; private set; } = -1;
@@ -51,6 +59,11 @@ public abstract partial class GalleryPage : VBoxContainer
 
     public override void _Ready()
     {
+        // The page fills its parent: a container through its size flags, anything else through its anchors.
+        SizeFlagsHorizontal = SizeFlagsVertical = SizeFlags.ExpandFill;
+        if (GetParent() is not Container) SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        Standalone = GetParent() is Window;
+        if (Standalone) Theme = GalleryTheme.Build(resources);
         AddThemeConstantOverride("separation", 10);
         heading = this.Add(new HBoxContainer());
         heading.AddThemeConstantOverride("separation", 16);
@@ -83,6 +96,48 @@ public abstract partial class GalleryPage : VBoxContainer
             examplePicker.AddItem(effects[i].Title);
             effects[i].Attach(AddCard($"{i + 1:00} / {effects[i].Title}", effects[i].Caption, i), Language);
         }
+
+        if (!Standalone) return;
+        if (GalleryEffect.Supports2DMsaa) GetWindow().Msaa2D = Viewport.Msaa.Msaa4X;
+        FullscreenRequested += EnterFullscreen;
+        FullscreenExitRequested += ExitFullscreen;
+        if (SoloOnStart >= 0) ShowSolo(SoloOnStart);
+        // Starts once the layout has settled, as the gallery does.
+        CallDeferred(MethodName.Start, LegDuration);
+    }
+
+    public override void _Draw()
+    {
+        if (Standalone) DrawRect(new Rect2(Vector2.Zero, Size), Palette.Background);
+    }
+
+    public override void _UnhandledInput(InputEvent input)
+    {
+        if (!Standalone || SoloEffect < 0 || !input.IsActionPressed("ui_cancel")) return;
+        ExitFullscreen();
+        GetViewport().SetInputAsHandled();
+    }
+
+    public override void _Notification(int what)
+    {
+        // Frees the cards first, so no node still references the resources the page releases.
+        if (what != NotificationPredelete) return;
+        foreach (var child in GetChildren()) child.Free();
+        ReleaseResources();
+    }
+
+    private void EnterFullscreen(int index)
+    {
+        ShowSolo(index);
+        windowed = DisplayServer.WindowGetMode();
+        if (windowed != DisplayServer.WindowMode.Fullscreen) DisplayServer.WindowSetMode(DisplayServer.WindowMode.Fullscreen);
+    }
+
+    private void ExitFullscreen()
+    {
+        if (SoloEffect < 0) return;
+        ShowGallery();
+        if (DisplayServer.WindowGetMode() != windowed) DisplayServer.WindowSetMode(windowed);
     }
 
     public void ShowSource(int index)
@@ -161,9 +216,10 @@ public abstract partial class GalleryPage : VBoxContainer
         SequenceTask = sequences.Length > 0 ? Task.WhenAll(sequences) : null;
     }
 
-    /// <summary>Called after Free(), so children have relinquished their native resource references.</summary>
-    public void ReleaseResources()
+    private void ReleaseResources()
     {
+        // A page freed before it entered the tree built nothing.
+        if (sourceView is null) return;
         sourceView.ReleaseResources();
         foreach (var effect in effects) effect.ReleaseResources();
         foreach (var resource in resources) resource.Dispose();
@@ -189,7 +245,7 @@ public abstract partial class GalleryPage : VBoxContainer
         label.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         label.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         var tools = header.Add(new HBoxContainer());
-        var record = tools.Add(new Button { Text = "Record", Visible = Gallery.CanRecord, TooltipText = $"Record this example to temp/ at {Gallery.RecordingFps} fps; Esc stops" });
+        var record = tools.Add(new Button { Text = "Record", Visible = Gallery.CanRecord && !Standalone, TooltipText = $"Record this example to temp/ at {Gallery.RecordingFps} fps; Esc stops" });
         record.AddThemeFontSizeOverride("font_size", 13);
         record.Pressed += () => RecordRequested?.Invoke(index);
         var fullscreen = tools.Add(new Button { Text = "Fullscreen", TooltipText = "Show only this example; Esc returns" });

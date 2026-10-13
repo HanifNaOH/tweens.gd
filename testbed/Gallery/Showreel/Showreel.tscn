@@ -8,21 +8,23 @@
 [ext_resource type="FontFile" uid="uid://dijctuamqfmnv" path="res://Fonts/JetBrainsMono-Regular.ttf" id="7_mono"]
 [ext_resource type="Shader" uid="uid://kkbylqv1weun" path="res://Gallery/Showreel/Leaf.gdshader" id="8_leaf"]
 [ext_resource type="Shader" uid="uid://d2y7ulne8bu1a" path="res://Gallery/Showreel/Vignette.gdshader" id="9_vignette"]
-
-[sub_resource type="FontVariation" id="FontVariation_italic"]
-base_font = ExtResource("7_mono")
-variation_transform = Transform2D(1, 0.2, 0, 1, 0, 0)
+[ext_resource type="Script" uid="uid://b6y40gwg00vow" path="res://Gallery/Showreel/ShowreelScene.cs" id="10_scene"]
 
 [sub_resource type="Environment" id="Environment_8yaoy"]
 background_mode = 1
 background_color = Color(0.9647059, 0.94509804, 0.90588236, 1)
 ambient_light_source = 2
 ambient_light_color = Color(1, 1, 1, 1)
-ambient_light_energy = 0.69
+ambient_light_energy = 0.6
+glow_enabled = true
+glow_bloom = 0.1
+glow_blend_mode = 2
 fog_enabled = true
 fog_mode = 1
 fog_light_color = Color(0.9647059, 0.94509804, 0.90588236, 1)
 fog_density = 1.0
+fog_height = -1.0
+fog_height_density = 2.0
 fog_depth_curve = 1.1
 fog_depth_begin = 0.0
 fog_depth_end = 60.0
@@ -32,6 +34,8 @@ render_priority = -128
 shader = ExtResource("1_paper")
 shader_parameter/paper = Color(0.9647059, 0.94509804, 0.90588236, 1)
 shader_parameter/rule = Color(0.92156863, 0.8862745, 0.827451, 1)
+shader_parameter/cell = 2.0
+shader_parameter/rule_width = 0.03125
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_xabdm"]
 size = Vector2(600, 600)
@@ -44,80 +48,6 @@ colors = PackedColorArray(0.9137255, 0.76862746, 0.6431373, 1, 0.8784314, 0.4784
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_nlr48"]
 gradient = SubResource("Gradient_kuf08")
 
-[sub_resource type="Gradient" id="Gradient_6c61w"]
-offsets = PackedFloat32Array(0.9375, 1)
-colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
-
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_cgx28"]
-gradient = SubResource("Gradient_6c61w")
-width = 32
-height = 32
-fill = 1
-fill_from = Vector2(0.5, 0.5)
-fill_to = Vector2(1, 0.5)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1oqau"]
-cull_mode = 2
-shading_mode = 0
-albedo_color = Color(0.8784314, 0.34117648, 0.23529412, 1)
-
-[sub_resource type="QuadMesh" id="QuadMesh_yq28r"]
-size = Vector2(0.05, 0.34)
-center_offset = Vector3(0, 0.17, 0)
-
-[sub_resource type="Gradient" id="Gradient_vs3y4"]
-interpolation_mode = 1
-offsets = PackedFloat32Array(0, 0.2, 0.4, 0.6, 0.8)
-colors = PackedColorArray(0.8784314, 0.34117648, 0.23529412, 1, 0.9411765, 0.65882355, 0.1882353, 1, 0.8784314, 0.47843137, 0.37254903, 1, 0.40392157, 0.63529414, 0.8666667, 1, 0.60784316, 0.8392157, 0.6117647, 1)
-
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_in0h5"]
-gradient = SubResource("Gradient_vs3y4")
-
-[sub_resource type="Gradient" id="Gradient_oj7fl"]
-offsets = PackedFloat32Array(0.984375, 1)
-colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
-
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_e4jdj"]
-gradient = SubResource("Gradient_oj7fl")
-width = 128
-height = 128
-fill = 1
-fill_from = Vector2(0.5, 0.5)
-fill_to = Vector2(1, 0.5)
-
-[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_5qrw6"]
-gravity = Vector3(0, 0, 0)
-scale_min = 0.8
-scale_max = 1.2
-color = Color(0.23921569, 0.16470589, 0.13333334, 0.7)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ng25c"]
-transparency = 1
-cull_mode = 2
-shading_mode = 0
-vertex_color_use_as_albedo = true
-albedo_texture = SubResource("GradientTexture2D_cgx28")
-
-[sub_resource type="QuadMesh" id="QuadMesh_5kbvh"]
-material = SubResource("StandardMaterial3D_ng25c")
-size = Vector2(0.07, 0.07)
-orientation = 1
-
-[sub_resource type="Gradient" id="Gradient_hjm42"]
-interpolation_mode = 1
-offsets = PackedFloat32Array(0, 0.33333334, 0.6666667)
-colors = PackedColorArray(0.9137255, 0.76862746, 0.6431373, 1, 0.6392157, 0.42745098, 0.28235295, 1, 0.8784314, 0.47843137, 0.37254903, 1)
-
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_tmb5f"]
-gradient = SubResource("Gradient_hjm42")
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_leaf"]
-shader = ExtResource("8_leaf")
-
-[sub_resource type="QuadMesh" id="QuadMesh_leaf"]
-material = SubResource("ShaderMaterial_leaf")
-size = Vector2(0.05, 0.09)
-
 [sub_resource type="Curve" id="Curve_wither"]
 _data = [Vector2(0, 0.4), 0.0, 0.0, 0, 0, Vector2(0.08, 1), 0.0, 0.0, 0, 0, Vector2(0.8, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
 point_count = 4
@@ -129,7 +59,6 @@ curve = SubResource("Curve_wither")
 emission_shape = 3
 emission_box_extents = Vector3(6, 2.5, 4)
 angle_max = 360.0
-direction = Vector3(1, 0, 0)
 spread = 15.0
 initial_velocity_min = 0.25
 initial_velocity_max = 0.6
@@ -147,25 +76,37 @@ turbulence_noise_scale = 4.0
 turbulence_influence_min = 0.05
 turbulence_influence_max = 0.15
 
-[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_toss"]
-angle_max = 360.0
-direction = Vector3(0, 1, 0)
-spread = 35.0
-initial_velocity_min = 2.5
-initial_velocity_max = 4.0
-angular_velocity_min = -240.0
-angular_velocity_max = 240.0
-gravity = Vector3(0, -2.2, 0)
-damping_min = 1.2
-damping_max = 1.8
-scale_min = 1.1
-scale_max = 1.9
-scale_curve = SubResource("CurveTexture_wither")
-color_initial_ramp = SubResource("GradientTexture1D_tmb5f")
-turbulence_enabled = true
-turbulence_noise_scale = 3.0
-turbulence_influence_min = 0.05
-turbulence_influence_max = 0.12
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_leaf"]
+render_priority = 0
+shader = ExtResource("8_leaf")
+shader_parameter/shape = 1.8
+shader_parameter/flutter_min = 3.0
+shader_parameter/flutter_max = 8.0
+
+[sub_resource type="QuadMesh" id="QuadMesh_leaf"]
+material = SubResource("ShaderMaterial_leaf")
+size = Vector2(0.05, 0.09)
+
+[sub_resource type="FontVariation" id="FontVariation_italic"]
+base_font = ExtResource("7_mono")
+variation_transform = Transform2D(1, 0.2, 0, 1, 0, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1oqau"]
+cull_mode = 2
+shading_mode = 0
+albedo_color = Color(0.8784314, 0.34117648, 0.23529412, 1)
+
+[sub_resource type="QuadMesh" id="QuadMesh_yq28r"]
+size = Vector2(0.05, 0.34)
+center_offset = Vector3(0, 0.17, 0)
+
+[sub_resource type="Gradient" id="Gradient_vs3y4"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.2, 0.4, 0.6, 0.8)
+colors = PackedColorArray(0.8784314, 0.34117648, 0.23529412, 1, 0.9411765, 0.65882355, 0.1882353, 1, 0.8784314, 0.47843137, 0.37254903, 1, 0.40392157, 0.63529414, 0.8666667, 1, 0.60784316, 0.8392157, 0.6117647, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_in0h5"]
+gradient = SubResource("Gradient_vs3y4")
 
 [sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_burst"]
 angle_max = 360.0
@@ -187,6 +128,26 @@ turbulence_noise_scale = 3.0
 turbulence_influence_min = 0.05
 turbulence_influence_max = 0.12
 
+[sub_resource type="Gradient" id="Gradient_oj7fl"]
+offsets = PackedFloat32Array(0.984375, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_e4jdj"]
+gradient = SubResource("Gradient_oj7fl")
+width = 128
+height = 128
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[sub_resource type="Gradient" id="Gradient_hjm42"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33333334, 0.6666667)
+colors = PackedColorArray(0.9137255, 0.76862746, 0.6431373, 1, 0.6392157, 0.42745098, 0.28235295, 1, 0.8784314, 0.47843137, 0.37254903, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_tmb5f"]
+gradient = SubResource("Gradient_hjm42")
+
 [sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_impact"]
 angle_max = 360.0
 direction = Vector3(0, 1, 0)
@@ -203,8 +164,55 @@ scale_max = 0.9
 scale_curve = SubResource("CurveTexture_wither")
 color_initial_ramp = SubResource("GradientTexture1D_tmb5f")
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_vignette"]
-shader = ExtResource("9_vignette")
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_5qrw6"]
+gravity = Vector3(0, 0, 0)
+scale_min = 0.8
+scale_max = 1.2
+color = Color(0.23921569, 0.16470589, 0.13333334, 0.7)
+
+[sub_resource type="Gradient" id="Gradient_6c61w"]
+offsets = PackedFloat32Array(0.9375, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_cgx28"]
+gradient = SubResource("Gradient_6c61w")
+width = 32
+height = 32
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ng25c"]
+transparency = 1
+cull_mode = 2
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_texture = SubResource("GradientTexture2D_cgx28")
+
+[sub_resource type="QuadMesh" id="QuadMesh_5kbvh"]
+material = SubResource("StandardMaterial3D_ng25c")
+size = Vector2(0.07, 0.07)
+orientation = 1
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_toss"]
+angle_max = 360.0
+direction = Vector3(0, 1, 0)
+spread = 35.0
+initial_velocity_min = 2.5
+initial_velocity_max = 4.0
+angular_velocity_min = -240.0
+angular_velocity_max = 240.0
+gravity = Vector3(0, -2.2, 0)
+damping_min = 1.2
+damping_max = 1.8
+scale_min = 1.1
+scale_max = 1.9
+scale_curve = SubResource("CurveTexture_wither")
+color_initial_ramp = SubResource("GradientTexture1D_tmb5f")
+turbulence_enabled = true
+turbulence_noise_scale = 3.0
+turbulence_influence_min = 0.05
+turbulence_influence_max = 0.12
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4g6yh"]
 cull_mode = 2
@@ -214,7 +222,15 @@ albedo_color = Color(0.78431374, 0.40784314, 0.3529412, 1)
 [sub_resource type="TorusMesh" id="TorusMesh_84rov"]
 inner_radius = 0.96
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_vignette"]
+shader = ExtResource("9_vignette")
+shader_parameter/tint = Color(0.6, 0.45, 0.36, 1)
+shader_parameter/strength = 0.5
+shader_parameter/inner = 0.35
+shader_parameter/outer = 1.15
+
 [node name="Showreel" type="Node3D" unique_id=1997410623]
+script = ExtResource("10_scene")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=697213619]
 editor_description = "Linear tone mapping keeps the type colors exact. Depth fog fades the page into the paper-colored background well before the camera's far plane."
@@ -224,11 +240,14 @@ environment = SubResource("Environment_8yaoy")
 editor_description = "A low sun at the front left: the lit page matches the background, and type casts soft, light shadows."
 transform = Transform3D(0.8660254, 0.30783075, -0.3940054, 0, 0.7880108, 0.6156615, 0.5, -0.5331785, 0.68243736, 0, 0, 0)
 light_energy = 0.5
-light_angular_distance = 0.6
 shadow_enabled = true
 shadow_opacity = 0.75
+directional_shadow_split_1 = 0.3
+directional_shadow_split_2 = 0.5
+directional_shadow_split_3 = 0.9
 directional_shadow_blend_splits = true
-directional_shadow_max_distance = 24.0
+directional_shadow_max_distance = 25.0
+directional_shadow_pancake_size = 5.0
 
 [node name="Page" type="MeshInstance3D" parent="." unique_id=1284077820]
 editor_description = "Large enough that the fog carries it into the background before its edge."
@@ -309,6 +328,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.4, 0, 0.8)
 script = ExtResource("5_definition")
 Text = "tween, n. software-calculated frame that interpolates changes in spatial coordinates, scale, rotation, or opacity between two keyframe markers across a timeline."
 PunchLine = "when you need a coat but no hat"
+Width = 4.0
 Font = SubResource("FontVariation_italic")
 Color = Color(0.23921569, 0.16470589, 0.13333334, 1)
 BodyColor = Color(0.23921569, 0.16470589, 0.13333334, 0.7)
@@ -805,8 +825,8 @@ process_material = SubResource("ParticleProcessMaterial_5qrw6")
 draw_pass_1 = SubResource("QuadMesh_5kbvh")
 
 [node name="Leaves" type="GPUParticles3D" parent="." unique_id=2039987691]
-editor_description = "Throws leaves into the air wherever the dot lands on the page, and along the wordmark as its letters land."
 unique_name_in_owner = true
+editor_description = "Throws leaves into the air wherever the dot lands on the page, and along the wordmark as its letters land."
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.0438447, 0.03, 0.23102733)
 cast_shadow = 0
 amount = 500
