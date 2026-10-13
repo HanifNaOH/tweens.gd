@@ -247,8 +247,6 @@ public partial class Gallery : Control
         page = Pages[index].Create();
         if (page is EasingPage easingPage) easingPage.Selection = easingSelection;
         page.Language = Language;
-        page.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        page.SizeFlagsVertical = SizeFlags.ExpandFill;
         page.FullscreenRequested += EnterFullscreen;
         page.RecordRequested += RequestRecording;
         page.FullscreenExitRequested += ExitFullscreen;
@@ -302,7 +300,6 @@ public partial class Gallery : Control
         if (page is null) return;
         if (page is EasingPage) easingSelection = ((EasingComposer)page.Effects[0]).Selection;
         page.Free();
-        page.ReleaseResources();
         page = null;
     }
 

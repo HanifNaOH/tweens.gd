@@ -91,6 +91,7 @@ public class GallerySourceTests(HeadlessFixture godot)
         try
         {
             var page = gallery.CurrentPage!;
+            Assert.False(page.Standalone);
             var sequence = page.SequenceTask;
             var fullscreen = Descendants(page).OfType<Button>().Where(b => b.Text == "Fullscreen").ToArray();
             Assert.Equal(page.Effects.Count, fullscreen.Length);
@@ -117,6 +118,62 @@ public class GallerySourceTests(HeadlessFixture godot)
             Assert.All(Descendants(gallery.CurrentPage).OfType<Button>().Where(b => b.Text == "Fullscreen"), b => Assert.True(b.IsVisibleInTree()));
         }
         finally { gallery.Free(); }
+        Pump();
+        Assert.Empty(godot.Errors.Drain());
+    }
+
+    [Theory]
+    [InlineData(GalleryLanguage.CSharp)] [InlineData(GalleryLanguage.GDScript)]
+    public void APageUnderTheRootWindowPlaysStandaloneWithItsOwnFullscreen(GalleryLanguage language)
+    {
+        var page = new SquashPage { Language = language };
+        godot.Tree.Root.AddChild(page);
+        Pump();
+        Task sequence;
+        try
+        {
+            Assert.True(page.Standalone);
+            Assert.NotNull(page.Theme);
+            Assert.Equal(new Vector4(0, 0, 1, 1), new Vector4(page.AnchorLeft, page.AnchorTop, page.AnchorRight, page.AnchorBottom));
+            Assert.Equal(Vector4.Zero, new Vector4(page.OffsetLeft, page.OffsetTop, page.OffsetRight, page.OffsetBottom));
+            sequence = Assert.IsAssignableFrom<Task>(page.SequenceTask);
+            Assert.False(sequence.IsCompleted);
+            Assert.All(page.Effects, effect => Assert.Equal(language, effect.Language));
+            Assert.DoesNotContain(Descendants(page).OfType<Button>(), b => b.Text == "Record" && b.Visible);
+
+            var fullscreen = Descendants(page).OfType<Button>().Where(b => b.Text == "Fullscreen").ToArray();
+            fullscreen[1].EmitSignal(BaseButton.SignalName.Pressed);
+            Pump();
+            Assert.Equal(1, page.SoloEffect);
+            Assert.Single(Stages(page));
+            Assert.Same(sequence, page.SequenceTask);
+
+            page.GetViewport().PushInput(new InputEventAction { Action = "ui_cancel", Pressed = true });
+            Pump();
+            Assert.Equal(-1, page.SoloEffect);
+            Assert.Equal(page.Effects.Count, Stages(page).Count());
+        }
+        finally { page.Free(); }
+        Assert.True(sequence.IsCompletedSuccessfully);
+        Pump();
+        Assert.Empty(godot.Errors.Drain());
+    }
+
+    [Fact]
+    public void RunningTheShowreelSceneOnItsOwnPlaysTheShowreelFillingThePage()
+    {
+        var scene = GD.Load<PackedScene>("res://Gallery/Showreel/Showreel.tscn").Instantiate();
+        godot.Tree.Root.AddChild(scene);
+        Pump();
+        var page = Assert.Single(godot.Tree.Root.GetChildren().OfType<ShowreelPage>());
+        try
+        {
+            Assert.False(GodotObject.IsInstanceValid(scene));
+            Assert.True(page.Standalone);
+            Assert.Equal(0, page.SoloEffect);
+            Assert.False(Assert.IsAssignableFrom<Task>(page.SequenceTask).IsCompleted);
+        }
+        finally { page.Free(); }
         Pump();
         Assert.Empty(godot.Errors.Drain());
     }
