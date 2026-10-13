@@ -20,6 +20,7 @@ func run(host: Node) -> bool:
 	await _resizes_during_animation_follow_live_slot_bounds()
 	await _deferred_reflow_holds_visual_rects()
 	await _rejects_overlap_and_cancels_cleanly()
+	await _empty_auto_discovery_does_not_mutate()
 	await _zero_duration_repeated_updates_and_freed_slots()
 	await _invalid_configuration_does_not_mutate()
 	await _unstable_reflow_fails_within_bound()
@@ -225,6 +226,17 @@ func _invalid_configuration_does_not_mutate() -> void:
 	check(transition.completion_reason == T.Reason.FAILED, "invalid layout options fail immediately")
 	check(not mutation_state.called, "invalid layout options do not invoke the mutation")
 	check(not transition.error.is_empty(), "failed layout handle retains an error message")
+	root.queue_free()
+
+func _empty_auto_discovery_does_not_mutate() -> void:
+	var scene := _make_container(false, 0)
+	var root := scene.root
+	var layout := T.create_layout(root)
+	var mutation_state := MutationState.new()
+	var transition := layout.update(func(_container: Control) -> void: mutation_state.called = true)
+	check(transition.completion_reason == T.Reason.FAILED, "layout without discovered items fails immediately")
+	check(not mutation_state.called, "layout without discovered items does not invoke its mutation")
+	check(not transition.error.is_empty(), "empty discovered layout explains its failure")
 	root.queue_free()
 
 func _zero_duration_repeated_updates_and_freed_slots() -> void:

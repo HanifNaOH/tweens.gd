@@ -50,8 +50,8 @@ func update(change: Callable, transition_options: TweensGdLayoutOptions = null) 
 	if not options_error.is_empty():
 		return LayoutHandle.rejected(options_error)
 	var items := _discover_items()
-	if _uses_explicit_items and items.is_empty():
-		return LayoutHandle.rejected("An explicit layout needs at least one item.")
+	if items.is_empty():
+		return LayoutHandle.rejected("A layout update needs at least one item.")
 	var item_error := _validate_items(items)
 	if not item_error.is_empty():
 		return LayoutHandle.rejected(item_error)
