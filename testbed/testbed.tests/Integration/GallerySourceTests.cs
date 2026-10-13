@@ -18,7 +18,7 @@ public class GallerySourceTests(HeadlessFixture godot)
     {
         var types = typeof(GalleryEffect).Assembly.GetTypes()
             .Where(t => t.IsSubclassOf(typeof(GalleryEffect)) && !t.IsAbstract && !t.IsNested).ToArray();
-        Assert.Equal(37, types.Length);
+        Assert.Equal(38, types.Length);
         foreach (var type in types)
         {
             var effect = (GalleryEffect)Activator.CreateInstance(type)!;

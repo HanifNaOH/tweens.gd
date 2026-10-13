@@ -1,6 +1,6 @@
 # testbed
 
-The gallery app: thirteen pages and 37 examples, each written in C# and in GDScript. A switch in the header picks the
+The gallery app: thirteen pages and 38 examples, each written in C# and in GDScript. A switch in the header picks the
 implementation that runs, and the source viewer shows the code that is running. Its tests compare the two languages.
 
 The gallery is a .NET app in both modes. Both languages share each example's scene, built by C# code or, for the
@@ -56,8 +56,8 @@ dotnet run --project testbed/testbed.2dog -- --gallery-snapshots artifacts/galle
   or scrub to pause; **Animate** resumes. The tint-and-fade column treats RGB and opacity independently.
 - The Keyframes page plays one sparse definition on three flyers with different captured starting positions.
   Position, scale, rotation and color share its duration, ping-pong and repeats.
-- The Layout transitions page reflows four Container-managed slots through four patterns. Each keeps its `Visual`
-  child under an independent FLIP transition in C# or GDScript.
+- The Layout transitions page reflows four Container-managed slots through four patterns and swaps explicit items
+  between parent branches. Each keeps its `Visual` child under an independent FLIP transition in C# or GDScript.
 - The Showreel page is a 55-second loop at the default leg duration, timed to an 80 bpm track that is not part of
   the repository. A dot crosses a page of printed words, and each word stands up with the easing it names. Every
   animated node plays keyframe definitions spanning the loop; the dot and the emitter laying its trail share one. GPU

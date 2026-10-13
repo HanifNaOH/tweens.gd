@@ -375,6 +375,59 @@ public class LayoutTests(HeadlessFixture godot)
     }
 
     [Fact]
+    public async Task ExplicitItemsInDifferentParentBranchesAnimateBothVisuals()
+    {
+        using var scope = new SceneScope(godot);
+        var root = new HBoxContainer { Size = new Vector2(320, 240), CustomMinimumSize = new Vector2(320, 240) };
+        var leftGroup = new VBoxContainer { Name = "LeftGroup", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        var rightGroup = new VBoxContainer { Name = "RightGroup", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        var leftSlot = new Control
+        {
+            Name = "LeftSlot",
+            CustomMinimumSize = new Vector2(60, 40),
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+        };
+        var rightSlot = new Control
+        {
+            Name = "RightSlot",
+            CustomMinimumSize = new Vector2(60, 40),
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+        };
+        var leftVisual = new ColorRect { Name = "Visual" };
+        var rightVisual = new ColorRect { Name = "Visual" };
+        leftVisual.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        rightVisual.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        leftSlot.AddChild(leftVisual);
+        rightSlot.AddChild(rightVisual);
+        leftGroup.AddChild(leftSlot);
+        rightGroup.AddChild(rightSlot);
+        root.AddChild(leftGroup);
+        root.AddChild(rightGroup);
+        scope.Add(root);
+        scope.Frames(2);
+
+        var initialLeftSize = leftVisual.Size;
+        var initialRightSize = rightVisual.Size;
+        var layout = Tweens.CreateLayoutFromItems(root,
+            [new LayoutItem(leftSlot, leftVisual), new LayoutItem(rightSlot, rightVisual)],
+            new LayoutOptions { Duration = 0.08 });
+        var transition = layout.Update(_ =>
+        {
+            leftSlot.CustomMinimumSize = new Vector2(200, 40);
+            leftGroup.QueueSort();
+            rightGroup.QueueSort();
+            root.QueueSort();
+        });
+
+        scope.FramesUntil(() => transition.End.IsCompleted, 120);
+        Assert.Equal(Reason.Completed, await transition.End);
+        Assert.NotEqual(initialLeftSize, leftVisual.Size);
+        Assert.NotEqual(initialRightSize, rightVisual.Size);
+        Assert.True(leftVisual.GetGlobalRect().IsEqualApprox(leftSlot.GetGlobalRect()));
+        Assert.True(rightVisual.GetGlobalRect().IsEqualApprox(rightSlot.GetGlobalRect()));
+    }
+
+    [Fact]
     public async Task CancelDuringReflowWaitsThenSnapsToFinalLayout()
     {
         using var scope = new SceneScope(godot);

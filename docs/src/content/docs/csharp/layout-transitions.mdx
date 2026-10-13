@@ -83,6 +83,24 @@ var items = new[]
 var layout = Tweens.CreateLayoutFromItems(root, items);
 ```
 
+Explicit pairs also support slots under different parent branches, as long as both remain under the controller root. Automatic discovery does not find these nested slots:
+
+```csharp
+var layout = Tweens.CreateLayoutFromItems(root,
+[
+    new LayoutItem(leftSlot, leftVisual),
+    new LayoutItem(rightSlot, rightVisual),
+], new LayoutOptions { Duration = 0.4 });
+var transition = layout.Update(_ =>
+{
+    leftSlot.CustomMinimumSize = new Vector2(200, 40);
+    root.QueueSort();
+});
+var reason = await transition.End;
+```
+
+Each visual must still be a direct child of its own slot; parent branches and visuals must share the same canvas. `UseLayoutZOrder` does not guarantee a global draw order across branches with different ancestor Z values.
+
 Each visual must be a direct child of its slot; each slot must be inside the root. Slots and visuals must be in the tree and share a viewport and canvas. Before every update, the visual must fill its slot, have zero rotation and pivot offset, and have unit scale.
 
 Only items present before the mutation and still paired with the same slot are animated. New, removed, or replaced items are not interpolated by that update.

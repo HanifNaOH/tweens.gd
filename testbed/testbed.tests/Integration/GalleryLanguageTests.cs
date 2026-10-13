@@ -59,7 +59,7 @@ public class GalleryLanguageTests
                     button.EmitSignal(BaseButton.SignalName.Pressed);
                 }
             }
-            if (name == nameof(LayoutMorph))
+            if (name is nameof(LayoutMorph) or nameof(NestedParentLayout))
                 for (var frame = 0; frame < 12 && GDScriptScheduler() is null; frame++) godot.Engine.Iteration();
             var gdScheduler = GDScriptScheduler();
             Assert.NotNull(gdScheduler);
@@ -67,16 +67,39 @@ public class GalleryLanguageTests
             // Binary-exact deltas keep endpoint comparisons independent of accumulated decimal roundoff.
             // At this tempo, 64 seconds covers two showreel loops, including every scene and the reset.
             var samples = name == nameof(Showreel) ? 4096 : 384;
+            var sawB4AtTopOfParentOneInCSharp = false;
+            var sawB4AtTopOfParentOneInGDScript = false;
+            var sawB4AtBottomOfParentTwoInCSharp = false;
+            var sawB4AtBottomOfParentTwoInGDScript = false;
             for (var tick = 0; tick < samples; tick++)
             {
+                if (name == nameof(NestedParentLayout)) godot.Engine.Iteration();
                 scheduler.Update(1.0 / 64);
                 gdScheduler!.Call("update", 1.0 / 64);
                 Compare(csharp.SceneTargets, gdscript.SceneTargets, name, tick);
+                if (name == nameof(NestedParentLayout))
+                {
+                    sawB4AtTopOfParentOneInCSharp |= HasStackOrder(csharp.SceneTargets["slots_b"], csharp.SceneTargets["left_group"].As<Control>(), reversed: true);
+                    sawB4AtTopOfParentOneInGDScript |= HasStackOrder(gdscript.SceneTargets["slots_b"], gdscript.SceneTargets["left_group"].As<Control>(), reversed: true);
+                    sawB4AtBottomOfParentTwoInCSharp |= HasStackOrder(csharp.SceneTargets["slots_b"], csharp.SceneTargets["right_group"].As<Control>(), reversed: false);
+                    sawB4AtBottomOfParentTwoInGDScript |= HasStackOrder(gdscript.SceneTargets["slots_b"], gdscript.SceneTargets["right_group"].As<Control>(), reversed: false);
+                }
                 Assert.Equal(csharp.Sequence!.IsCompleted, gdscript.Sequence.IsCompleted);
+            }
+            if (name == nameof(NestedParentLayout))
+            {
+                Assert.Equal(3, csharp.SceneTargets["slots_a"].AsGodotArray().Count);
+                Assert.Equal(4, csharp.SceneTargets["slots_b"].AsGodotArray().Count);
+                Assert.Equal(["A1", "A2", "A3"], ItemLabels(csharp.SceneTargets["visuals_a"]));
+                Assert.Equal(["B1", "B2", "B3", "B4"], ItemLabels(csharp.SceneTargets["visuals_b"]));
+                Assert.True(sawB4AtTopOfParentOneInCSharp, "C# should move B4 to the top of Parent 1.");
+                Assert.True(sawB4AtTopOfParentOneInGDScript, "GDScript should move B4 to the top of Parent 1.");
+                Assert.True(sawB4AtBottomOfParentTwoInCSharp, "C# should return B4 to the bottom of Parent 2.");
+                Assert.True(sawB4AtBottomOfParentTwoInGDScript, "GDScript should return B4 to the bottom of Parent 2.");
             }
             first.Free();
             second.Free();
-            if (name == nameof(LayoutMorph))
+            if (name is nameof(LayoutMorph) or nameof(NestedParentLayout))
                 for (var frame = 0; frame < 3 && (!csharp.Sequence!.IsCompleted || !gdscript.Sequence!.IsCompleted); frame++) godot.Engine.Iteration();
             Assert.True(csharp.Sequence!.IsCompletedSuccessfully);
             Assert.True(gdscript.Sequence!.IsCompletedSuccessfully);
@@ -420,6 +443,28 @@ public class GalleryLanguageTests
         "albedo_color", "roughness", "emission", "emission_energy_multiplier", "uv1_offset", "uv1_scale",
         "offset_transform_position", "offset_transform_rotation", "offset_transform_scale", "points", "transparency"
     ];
+
+    private static bool HasStackOrder(Variant items, Control parent, bool reversed)
+    {
+        var array = items.AsGodotArray();
+        if (array.Count == 0) return false;
+        for (var index = 0; index < array.Count; index++)
+        {
+            var slot = array[index].As<Control>();
+            var expectedIndex = reversed ? array.Count - index : index + 1;
+            if (slot.GetParent() != parent || slot.GetIndex() != expectedIndex) return false;
+        }
+        return true;
+    }
+
+    private static string[] ItemLabels(Variant visuals)
+    {
+        var array = visuals.AsGodotArray();
+        var labels = new string[array.Count];
+        for (var index = 0; index < array.Count; index++)
+            labels[index] = array[index].As<Control>().GetChild<Label>(0).Text;
+        return labels;
+    }
 
     private static void Compare(Variant a, Variant b, string path, int tick)
     {

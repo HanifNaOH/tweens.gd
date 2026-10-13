@@ -64,6 +64,25 @@ var items: Array[TweensGdLayoutItem] = [
 var layout := Tweens.create_layout_from_items(root, items)
 ```
 
+Explicit pairs also support slots under different parent branches, as long as both remain under the controller root. Automatic discovery does not find these nested slots:
+
+```gdscript
+var items: Array[TweensGdLayoutItem] = [
+	TweensGdLayoutItem.new(left_slot, left_visual),
+	TweensGdLayoutItem.new(right_slot, right_visual),
+]
+var options := TweensGdLayoutOptions.new()
+options.duration = 0.4
+var layout := Tweens.create_layout_from_items(root, items, options)
+var transition := layout.update(func(_root: Control) -> void:
+	left_slot.custom_minimum_size = Vector2(200, 40)
+	root.queue_sort()
+)
+var reason: int = await transition.end
+```
+
+Each visual must still be a direct child of its own slot; parent branches and visuals must share the same canvas. `use_layout_z_order` does not guarantee a global draw order across branches with different ancestor Z values.
+
 Each visual must be a direct child of its slot; each slot must be inside the root. Slots and visuals must be in the tree and share a viewport and canvas. Before every update, the visual must fill its slot, have zero rotation and pivot offset, and have unit scale.
 
 Only items present before the mutation and still paired with the same slot are animated. New, removed, or replaced items are not interpolated by that update.
