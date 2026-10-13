@@ -26,11 +26,11 @@ var _explicit_items: Array[TweensGdLayoutItem] = []
 var _uses_explicit_items := false
 
 func _init(root: Control = null, layout_options: TweensGdLayoutOptions = null,
-		explicit_items: Array[TweensGdLayoutItem] = null) -> void:
+		explicit_items: Array[TweensGdLayoutItem] = [], use_explicit_items: bool = false) -> void:
 	_root = root
 	if layout_options != null:
 		options = layout_options.copy()
-	if explicit_items != null:
+	if use_explicit_items or not explicit_items.is_empty():
 		_uses_explicit_items = true
 		_explicit_items.assign(explicit_items)
 

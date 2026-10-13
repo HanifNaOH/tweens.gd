@@ -184,4 +184,4 @@ static func create_layout(root: Control, options: TweensGdLayoutOptions = null) 
 ## Creates a reusable Tween Layout controller from explicit layout-slot and visual-wrapper pairs.
 static func create_layout_from_items(root: Control, items: Array[TweensGdLayoutItem],
 		options: TweensGdLayoutOptions = null) -> TweensGdLayout:
-	return Layout.new(root, options, items)
+	return Layout.new(root, options, items, true)
