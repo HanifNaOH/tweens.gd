@@ -26,14 +26,14 @@ var _root: Control
 var _explicit_items: Array[TweensGdLayoutItem] = []
 var _uses_explicit_items := false
 
-func _init(root: Control = null, layout_options: TweensGdLayoutOptions = null, explicit_items: Variant = null) -> void:
+func _init(root: Control = null, layout_options: TweensGdLayoutOptions = null,
+		explicit_items: Array[TweensGdLayoutItem] = null) -> void:
 	_root = root
 	if layout_options != null:
 		options = layout_options.copy()
 	if explicit_items != null:
 		_uses_explicit_items = true
-		if explicit_items is Array:
-			_explicit_items.assign(explicit_items)
+		_explicit_items.assign(explicit_items)
 
 func update(change: Callable, transition_options: TweensGdLayoutOptions = null) -> TweensGdLayoutHandle:
 	if active:

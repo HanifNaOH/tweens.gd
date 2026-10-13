@@ -16,7 +16,10 @@ var is_paused: bool:
 		return _group.is_paused if _group != null and not _following else _paused
 var end: Variant:
 	get:
-		return ended if completion_reason == -1 else completion_reason
+		if completion_reason == -1:
+			return ended
+		else:
+			return completion_reason
 
 var _group: TweensGdGroup
 var _paused := false
