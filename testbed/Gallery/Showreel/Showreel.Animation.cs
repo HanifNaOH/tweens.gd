@@ -44,7 +44,7 @@ public sealed partial class Showreel
                 rig.Tween(Rig()), camera.Tween(Lens()), fade.Tween(Fade()),
                 // One definition moves both the dot and the emitter that lays its trail.
                 dot.Tween(route), trail.Tween(route), trail.Tween(Lay()),
-                disc.Tween(Disc()), rim.Tween(Rim()), dust.Tween(Dust())),
+                disc.Tween(Disc()), rim.Tween(Rim()), leaves.Tween(Toss()), impact.Tween(Impact())),
             PlayAsync(ripples.Select((ripple, i) => ripple.Tween(Ripple(i)))));
     }
 
@@ -494,24 +494,38 @@ public sealed partial class Showreel
         Key.At(T(54.76), Speed(1)), Key.At(T(54.78), Speed(400)), Key.At(T(54.99), Speed(400)), Key.At(100, Speed(1)),
     ]);
 
-    /// <summary>Puffs of paper dust at every landing, and along the wordmark as its letters land.</summary>
-    private Tweens.Keyframes Dust()
+    /// <summary>Every touchdown of the disc and the height it lands at: its drop and rebound, each hop onto a BOUNCE
+    /// letter, and the landing after BOUNCE and its rebound.</summary>
+    private (double At, float Height)[] Contacts() => [
+        (Bars(1) + Eighth, 0), (Bars(1) + Beat, 0), .. bounce.Select((_, i) => (Landing(i), cap)), (Landing(6), 0), (Landing(6) + Eighth, 0),
+    ];
+
+    /// <summary>A spray of small leaves at every touchdown of the disc.</summary>
+    private Tweens.Keyframes Impact()
+    {
+        List<Key> keys = [Key.At(0, y: 0.02), Key.At(0, Ratio(0))];
+        foreach (var (at, height) in Contacts())
+        {
+            keys.AddRange([
+                Key.At(T(at - 0.04), y: height + 0.02), Key.At(T(at - 0.01), Ratio(0)), Key.At(T(at), Ratio(1)),
+                Key.At(T(at + 0.04), Ratio(1)), Key.At(T(at + 0.05), Ratio(0)),
+            ]);
+        }
+        return Timeline(keys);
+    }
+
+    /// <summary>Leaves thrown into the air at every landing on the page, and along the wordmark as its letters land.</summary>
+    private Tweens.Keyframes Toss()
     {
         var first = Landings()[0].Spot;
         List<Key> keys = [Key.At(0, x: first.X, z: first.Z), Key.At(0, Ratio(0))];
-        foreach (var (time, spot) in Landings())
-        {
-            keys.AddRange([
-                Key.At(T(time - 0.03), x: spot.X, z: spot.Z), Key.At(T(time - 0.02), Ratio(0)), Key.At(T(time), Ratio(1)),
-                Key.At(T(time + 0.1), Ratio(1)), Key.At(T(time + 0.12), Ratio(0)),
-            ]);
-        }
-        Vector3 left = On(5, Page(logo[0])), right = On(5, Page(logo[^1]));
-        keys.AddRange([
-            Key.At(T(46.055), x: left.X, z: left.Z), Key.At(T(46.085), Ratio(0)), Key.At(T(46.105), Ratio(1)),
-            Key.At(T(48.73), x: right.X, z: right.Z, interpolation: Interpolation.Linear),
-            Key.At(T(48.755), Ratio(1)), Key.At(T(48.775), Ratio(0)),
+        void Throw(double at, Vector3 spot, double open) => keys.AddRange([
+            Key.At(T(at - 0.03), x: spot.X, z: spot.Z), Key.At(T(at - 0.02), Ratio(0)), Key.At(T(at), Ratio(1)),
+            Key.At(T(at + open), Ratio(1)), Key.At(T(at + open + 0.02), Ratio(0)),
         ]);
+        foreach (var (time, spot) in Landings()) Throw(time, spot, 0.1);
+        // A smaller throw as each wordmark letter lands, just in front of it, so the leaves fly up before the letters.
+        for (var i = 0; i < logo.Length; i++) Throw(Bars(15) + Eighth * i, On(5, Page(logo[i]) + Vector3.Back * 0.3f), 0.05);
         return Timeline(keys);
     }
 

@@ -61,7 +61,8 @@ dotnet run --project testbed/testbed.2dog -- --gallery-snapshots artifacts/galle
 - The Showreel page is a 55-second loop at the default leg duration, timed to an 80 bpm track that is not part of
   the repository. A dot crosses a page of printed words, and each word stands up with the easing it names. Every
   animated node plays keyframe definitions spanning the loop; the dot and the emitter laying its trail share one. GPU
-  particles emit while keyframes raise their amount ratio.
+  particles emit while keyframes raise their amount ratio. `../scripts/Mix-Showreel.ps1 -Record` records a loop and
+  mixes the track under it.
 
 ## Layout
 
