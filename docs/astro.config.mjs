@@ -127,6 +127,9 @@ export default defineConfig({
 			description: "A tweening library for Godot (that doesn't suck.)",
 			// Starlight emits og:title/description/url and twitter:card; this adds the preview image.
 			head: [
+
+			    { tag: 'link', attrs: { rel: "me", href: "https://mastodon.gamedev.place/@jupiter" }},
+			    { tag: 'link', attrs: { rel: "me", href: "https://tiggi.es/@thygrrr" }},
 				{ tag: 'meta', attrs: { property: 'og:image', content: 'https://tweens.gd/og-card.png' } },
 				{ tag: 'meta', attrs: { property: 'og:image:type', content: 'image/png' } },
 				{ tag: 'meta', attrs: { property: 'og:image:width', content: '1200' } },
