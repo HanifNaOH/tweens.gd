@@ -5,6 +5,7 @@ namespace testbed;
 public partial class ShowreelPage : GalleryPage
 {
     public override string Heading => "Showreel";
-    public override string Description => "A dot crosses a page of words; each stands up with the easing it names.";
+    public override string Description => "tweens.gd - Autumn '26 Mini Showreel";
     protected override GalleryEffect[] CreateEffects() => [new Showreel()];
+
 }
