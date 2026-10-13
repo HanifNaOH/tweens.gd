@@ -1,440 +1,440 @@
 {
   "tolerance": 1e-06,
   "cases": [
-    {
-      "name": "delay preserves remainder",
-      "options": {
-        "duration": 1,
-        "delay": 0.5
-      },
-      "samples": [
-        {
-          "delta": 0.25,
-          "progress": 0,
-          "state": 0
-        },
-        {
-          "delta": 0.5,
-          "progress": 0.25,
-          "state": 1
-        },
-        {
-          "delta": 1,
-          "progress": 1,
-          "state": 3
-        }
-      ]
-    },
-    {
-      "name": "ping pong turn and return",
-      "options": {
-        "duration": 1,
-        "ping_pong": true,
-        "ping_pong_interval": 0.5
-      },
-      "samples": [
-        {
-          "delta": 1,
-          "progress": 1,
-          "state": 1
-        },
-        {
-          "delta": 0.25,
-          "progress": 1,
-          "state": 2
-        },
-        {
-          "delta": 0.75,
-          "progress": 0.5,
-          "state": 1
-        },
-        {
-          "delta": 0.5,
-          "progress": 0,
-          "state": 3
-        }
-      ]
-    },
-    {
-      "name": "repeat interval",
-      "options": {
-        "duration": 1,
-        "repeat_interval": 1,
-        "repeats": 1
-      },
-      "samples": [
-        {
-          "delta": 1.5,
-          "progress": 1,
-          "state": 2
-        },
-        {
-          "delta": 0.75,
-          "progress": 0.25,
-          "state": 1
-        },
-        {
-          "delta": 0.75,
-          "progress": 1,
-          "state": 3
-        }
-      ]
-    },
-    {
-      "name": "ping pong repeat interval",
-      "options": {
-        "duration": 1,
-        "ping_pong": true,
-        "repeat_interval": 1,
-        "repeats": 1
-      },
-      "samples": [
-        {
-          "delta": 2.5,
-          "progress": 0,
-          "state": 2
-        },
-        {
-          "delta": 1,
-          "progress": 0.5,
-          "state": 1
-        },
-        {
-          "delta": 1.5,
-          "progress": 0,
-          "state": 3
-        }
-      ]
-    },
-    {
-      "name": "zero length legs",
-      "options": {
-        "ping_pong": true,
-        "ping_pong_interval": 1,
-        "repeat_interval": 1,
-        "repeats": 1
-      },
-      "samples": [
-        {
-          "delta": 0.5,
-          "progress": 1,
-          "state": 2
-        },
-        {
-          "delta": 1,
-          "progress": 0,
-          "state": 2
-        },
-        {
-          "delta": 1.5,
-          "progress": 0,
-          "state": 3
-        }
-      ]
-    },
-    {
-      "name": "cycle boundary preserves endpoint",
-      "options": {
-        "duration": 1,
-        "repeats": 2
-      },
-      "samples": [
-        {
-          "delta": 1,
-          "progress": 1,
-          "state": 1,
-          "cycle": 0
-        },
-        {
-          "delta": 0.5,
-          "progress": 0.5,
-          "state": 1,
-          "cycle": 1
-        },
-        {
-          "delta": 1.5,
-          "progress": 1,
-          "state": 3,
-          "cycle": 2
-        }
-      ]
-    },
-    {
-      "name": "delay before offset",
-      "options": {
-        "duration": 2,
-        "delay": 0.5,
-        "offset": 1
-      },
-      "samples": [
-        {
-          "delta": 0.25,
-          "progress": 0,
-          "state": 0
-        },
-        {
-          "delta": 0.25,
-          "progress": 0.5,
-          "state": 1
-        },
-        {
-          "delta": 1.25,
-          "progress": 1,
-          "state": 3
-        }
-      ]
-    },
-    {
-      "name": "zero duration waits for eligible tick",
-      "options": {},
-      "samples": [
-        {
-          "delta": 0,
-          "progress": 1,
-          "state": 3
-        }
-      ]
-    },
-    {
-      "name": "large delta skips cycles",
-      "options": {
-        "duration": 1,
-        "repeats": 1000000
-      },
-      "samples": [
-        {
-          "delta": 999999.25,
-          "progress": 0.25,
-          "state": 1,
-          "cycle": 999999
-        },
-        {
-          "delta": 2,
-          "progress": 1,
-          "state": 3,
-          "cycle": 1000000
-        }
-      ]
-    },
-    {
-      "name": "infinite stays active",
-      "options": {
-        "duration": 1,
-        "repeats": -1
-      },
-      "samples": [
-        {
-          "delta": 1000000000000,
-          "progress": 1,
-          "state": 1
-        },
-        {
-          "delta": 0.25,
-          "progress": 0.25,
-          "state": 1
-        }
-      ]
-    },
-    {
-      "name": "explicit local time advances through delay",
-      "options": {
-        "duration": 1,
-        "delay": 0.5
-      },
-      "samples": [
-        {
-          "delta": 0,
-          "progress": 0.25,
-          "state": 1
-        },
-        {
-          "delta": 1,
-          "progress": 1,
-          "state": 3
-        }
-      ],
-      "local_time": 0.75
-    },
-    {
-      "name": "offset reaches endpoint",
-      "options": {
-        "duration": 1,
-        "offset": 1
-      },
-      "samples": [
-        {
-          "delta": 0,
-          "progress": 1,
-          "state": 3
-        }
-      ]
-    }
+	{
+	  "name": "delay preserves remainder",
+	  "options": {
+		"duration": 1,
+		"delay": 0.5
+	  },
+	  "samples": [
+		{
+		  "delta": 0.25,
+		  "progress": 0,
+		  "state": 0
+		},
+		{
+		  "delta": 0.5,
+		  "progress": 0.25,
+		  "state": 1
+		},
+		{
+		  "delta": 1,
+		  "progress": 1,
+		  "state": 3
+		}
+	  ]
+	},
+	{
+	  "name": "ping pong turn and return",
+	  "options": {
+		"duration": 1,
+		"ping_pong": true,
+		"ping_pong_interval": 0.5
+	  },
+	  "samples": [
+		{
+		  "delta": 1,
+		  "progress": 1,
+		  "state": 1
+		},
+		{
+		  "delta": 0.25,
+		  "progress": 1,
+		  "state": 2
+		},
+		{
+		  "delta": 0.75,
+		  "progress": 0.5,
+		  "state": 1
+		},
+		{
+		  "delta": 0.5,
+		  "progress": 0,
+		  "state": 3
+		}
+	  ]
+	},
+	{
+	  "name": "repeat interval",
+	  "options": {
+		"duration": 1,
+		"repeat_interval": 1,
+		"repeats": 1
+	  },
+	  "samples": [
+		{
+		  "delta": 1.5,
+		  "progress": 1,
+		  "state": 2
+		},
+		{
+		  "delta": 0.75,
+		  "progress": 0.25,
+		  "state": 1
+		},
+		{
+		  "delta": 0.75,
+		  "progress": 1,
+		  "state": 3
+		}
+	  ]
+	},
+	{
+	  "name": "ping pong repeat interval",
+	  "options": {
+		"duration": 1,
+		"ping_pong": true,
+		"repeat_interval": 1,
+		"repeats": 1
+	  },
+	  "samples": [
+		{
+		  "delta": 2.5,
+		  "progress": 0,
+		  "state": 2
+		},
+		{
+		  "delta": 1,
+		  "progress": 0.5,
+		  "state": 1
+		},
+		{
+		  "delta": 1.5,
+		  "progress": 0,
+		  "state": 3
+		}
+	  ]
+	},
+	{
+	  "name": "zero length legs",
+	  "options": {
+		"ping_pong": true,
+		"ping_pong_interval": 1,
+		"repeat_interval": 1,
+		"repeats": 1
+	  },
+	  "samples": [
+		{
+		  "delta": 0.5,
+		  "progress": 1,
+		  "state": 2
+		},
+		{
+		  "delta": 1,
+		  "progress": 0,
+		  "state": 2
+		},
+		{
+		  "delta": 1.5,
+		  "progress": 0,
+		  "state": 3
+		}
+	  ]
+	},
+	{
+	  "name": "cycle boundary preserves endpoint",
+	  "options": {
+		"duration": 1,
+		"repeats": 2
+	  },
+	  "samples": [
+		{
+		  "delta": 1,
+		  "progress": 1,
+		  "state": 1,
+		  "cycle": 0
+		},
+		{
+		  "delta": 0.5,
+		  "progress": 0.5,
+		  "state": 1,
+		  "cycle": 1
+		},
+		{
+		  "delta": 1.5,
+		  "progress": 1,
+		  "state": 3,
+		  "cycle": 2
+		}
+	  ]
+	},
+	{
+	  "name": "delay before offset",
+	  "options": {
+		"duration": 2,
+		"delay": 0.5,
+		"offset": 1
+	  },
+	  "samples": [
+		{
+		  "delta": 0.25,
+		  "progress": 0,
+		  "state": 0
+		},
+		{
+		  "delta": 0.25,
+		  "progress": 0.5,
+		  "state": 1
+		},
+		{
+		  "delta": 1.25,
+		  "progress": 1,
+		  "state": 3
+		}
+	  ]
+	},
+	{
+	  "name": "zero duration waits for eligible tick",
+	  "options": {},
+	  "samples": [
+		{
+		  "delta": 0,
+		  "progress": 1,
+		  "state": 3
+		}
+	  ]
+	},
+	{
+	  "name": "large delta skips cycles",
+	  "options": {
+		"duration": 1,
+		"repeats": 1000000
+	  },
+	  "samples": [
+		{
+		  "delta": 999999.25,
+		  "progress": 0.25,
+		  "state": 1,
+		  "cycle": 999999
+		},
+		{
+		  "delta": 2,
+		  "progress": 1,
+		  "state": 3,
+		  "cycle": 1000000
+		}
+	  ]
+	},
+	{
+	  "name": "infinite stays active",
+	  "options": {
+		"duration": 1,
+		"repeats": -1
+	  },
+	  "samples": [
+		{
+		  "delta": 1000000000000,
+		  "progress": 1,
+		  "state": 1
+		},
+		{
+		  "delta": 0.25,
+		  "progress": 0.25,
+		  "state": 1
+		}
+	  ]
+	},
+	{
+	  "name": "explicit local time advances through delay",
+	  "options": {
+		"duration": 1,
+		"delay": 0.5
+	  },
+	  "samples": [
+		{
+		  "delta": 0,
+		  "progress": 0.25,
+		  "state": 1
+		},
+		{
+		  "delta": 1,
+		  "progress": 1,
+		  "state": 3
+		}
+	  ],
+	  "local_time": 0.75
+	},
+	{
+	  "name": "offset reaches endpoint",
+	  "options": {
+		"duration": 1,
+		"offset": 1
+	  },
+	  "samples": [
+		{
+		  "delta": 0,
+		  "progress": 1,
+		  "state": 3
+		}
+	  ]
+	}
   ],
   "easing": [
-    {
-      "ease": 0,
-      "t": 0.25,
-      "value": 0.25
-    },
-    {
-      "ease": 10,
-      "t": 0.25,
-      "value": 0.0761204674887133
-    },
-    {
-      "ease": 11,
-      "t": 0.25,
-      "value": 0.3826834323650898
-    },
-    {
-      "ease": 12,
-      "t": 0.25,
-      "value": 0.1464466094067262
-    },
-    {
-      "ease": 20,
-      "t": 0.25,
-      "value": 0.0625
-    },
-    {
-      "ease": 21,
-      "t": 0.25,
-      "value": 0.4375
-    },
-    {
-      "ease": 22,
-      "t": 0.25,
-      "value": 0.125
-    },
-    {
-      "ease": 30,
-      "t": 0.25,
-      "value": 0.015625
-    },
-    {
-      "ease": 31,
-      "t": 0.25,
-      "value": 0.578125
-    },
-    {
-      "ease": 32,
-      "t": 0.25,
-      "value": 0.0625
-    },
-    {
-      "ease": 40,
-      "t": 0.25,
-      "value": 0.00390625
-    },
-    {
-      "ease": 41,
-      "t": 0.25,
-      "value": 0.68359375
-    },
-    {
-      "ease": 42,
-      "t": 0.25,
-      "value": 0.03125
-    },
-    {
-      "ease": 50,
-      "t": 0.25,
-      "value": 0.0009765625
-    },
-    {
-      "ease": 51,
-      "t": 0.25,
-      "value": 0.7626953125
-    },
-    {
-      "ease": 52,
-      "t": 0.25,
-      "value": 0.015625
-    },
-    {
-      "ease": 60,
-      "t": 0.25,
-      "value": 0.0055242717280199
-    },
-    {
-      "ease": 61,
-      "t": 0.25,
-      "value": 0.8232233047033631
-    },
-    {
-      "ease": 62,
-      "t": 0.25,
-      "value": 0.015625
-    },
-    {
-      "ease": 70,
-      "t": 0.25,
-      "value": 0.0317541634481457
-    },
-    {
-      "ease": 71,
-      "t": 0.25,
-      "value": 0.6614378277661477
-    },
-    {
-      "ease": 72,
-      "t": 0.25,
-      "value": 0.0669872981077807
-    },
-    {
-      "ease": 80,
-      "t": 0.25,
-      "value": -0.0641365625
-    },
-    {
-      "ease": 81,
-      "t": 0.25,
-      "value": 0.8174096875
-    },
-    {
-      "ease": 82,
-      "t": 0.25,
-      "value": -0.09968184375
-    },
-    {
-      "ease": 90,
-      "t": 0.25,
-      "value": -0.0055242717280199
-    },
-    {
-      "ease": 91,
-      "t": 0.25,
-      "value": 0.9116116523516816
-    },
-    {
-      "ease": 92,
-      "t": 0.25,
-      "value": 0.011969444423734
-    },
-    {
-      "ease": 100,
-      "t": 0.25,
-      "value": 0.02734375
-    },
-    {
-      "ease": 101,
-      "t": 0.25,
-      "value": 0.47265625
-    },
-    {
-      "ease": 102,
-      "t": 0.25,
-      "value": 0.1171875
-    },
-    {
-      "ease": 110,
-      "t": 0.25,
-      "value": 0.15625
-    },
-    {
-      "ease": 120,
-      "t": 0.25,
-      "value": 0.103515625
-    }
+	{
+	  "ease": 0,
+	  "t": 0.25,
+	  "value": 0.25
+	},
+	{
+	  "ease": 10,
+	  "t": 0.25,
+	  "value": 0.0761204674887133
+	},
+	{
+	  "ease": 11,
+	  "t": 0.25,
+	  "value": 0.3826834323650898
+	},
+	{
+	  "ease": 12,
+	  "t": 0.25,
+	  "value": 0.1464466094067262
+	},
+	{
+	  "ease": 20,
+	  "t": 0.25,
+	  "value": 0.0625
+	},
+	{
+	  "ease": 21,
+	  "t": 0.25,
+	  "value": 0.4375
+	},
+	{
+	  "ease": 22,
+	  "t": 0.25,
+	  "value": 0.125
+	},
+	{
+	  "ease": 30,
+	  "t": 0.25,
+	  "value": 0.015625
+	},
+	{
+	  "ease": 31,
+	  "t": 0.25,
+	  "value": 0.578125
+	},
+	{
+	  "ease": 32,
+	  "t": 0.25,
+	  "value": 0.0625
+	},
+	{
+	  "ease": 40,
+	  "t": 0.25,
+	  "value": 0.00390625
+	},
+	{
+	  "ease": 41,
+	  "t": 0.25,
+	  "value": 0.68359375
+	},
+	{
+	  "ease": 42,
+	  "t": 0.25,
+	  "value": 0.03125
+	},
+	{
+	  "ease": 50,
+	  "t": 0.25,
+	  "value": 0.0009765625
+	},
+	{
+	  "ease": 51,
+	  "t": 0.25,
+	  "value": 0.7626953125
+	},
+	{
+	  "ease": 52,
+	  "t": 0.25,
+	  "value": 0.015625
+	},
+	{
+	  "ease": 60,
+	  "t": 0.25,
+	  "value": 0.0055242717280199
+	},
+	{
+	  "ease": 61,
+	  "t": 0.25,
+	  "value": 0.8232233047033631
+	},
+	{
+	  "ease": 62,
+	  "t": 0.25,
+	  "value": 0.015625
+	},
+	{
+	  "ease": 70,
+	  "t": 0.25,
+	  "value": 0.0317541634481457
+	},
+	{
+	  "ease": 71,
+	  "t": 0.25,
+	  "value": 0.6614378277661477
+	},
+	{
+	  "ease": 72,
+	  "t": 0.25,
+	  "value": 0.0669872981077807
+	},
+	{
+	  "ease": 80,
+	  "t": 0.25,
+	  "value": -0.0641365625
+	},
+	{
+	  "ease": 81,
+	  "t": 0.25,
+	  "value": 0.8174096875
+	},
+	{
+	  "ease": 82,
+	  "t": 0.25,
+	  "value": -0.09968184375
+	},
+	{
+	  "ease": 90,
+	  "t": 0.25,
+	  "value": -0.0055242717280199
+	},
+	{
+	  "ease": 91,
+	  "t": 0.25,
+	  "value": 0.9116116523516816
+	},
+	{
+	  "ease": 92,
+	  "t": 0.25,
+	  "value": 0.011969444423734
+	},
+	{
+	  "ease": 100,
+	  "t": 0.25,
+	  "value": 0.02734375
+	},
+	{
+	  "ease": 101,
+	  "t": 0.25,
+	  "value": 0.47265625
+	},
+	{
+	  "ease": 102,
+	  "t": 0.25,
+	  "value": 0.1171875
+	},
+	{
+	  "ease": 110,
+	  "t": 0.25,
+	  "value": 0.15625
+	},
+	{
+	  "ease": 120,
+	  "t": 0.25,
+	  "value": 0.103515625
+	}
   ]
 }

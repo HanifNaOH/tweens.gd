@@ -316,6 +316,19 @@ public class LayoutTests(HeadlessFixture godot)
     }
 
     [Fact]
+    public async Task ImmediateRootFreeReturnsOwnerExitedTransition()
+    {
+        using var scope = new SceneScope(godot);
+        var (root, _, _) = MakeRow(scope, 2);
+        scope.Frames(2);
+        var layout = Tweens.CreateLayout(root);
+        var transition = layout.Update(container => container.Free());
+
+        Assert.Equal(Reason.OwnerExited, await transition.End);
+        Assert.False(layout.IsActive);
+    }
+
+    [Fact]
     public void InvalidOptionsFaultBeforeMutation()
     {
         using var scope = new SceneScope(godot);

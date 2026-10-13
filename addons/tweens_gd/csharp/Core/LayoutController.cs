@@ -67,6 +67,7 @@ public sealed class LayoutController
             return transition;
         }
 
+        var tree = root.GetTree();
         active = transition;
         Exception? mutationError = null;
         try { change(root); }
@@ -74,7 +75,7 @@ public sealed class LayoutController
 
         HoldFirstState(snapshots);
         HoldFirstStateDeferred(transition, snapshots);
-        _ = RunAsync(transition, snapshots, runOptions, mutationError, root.GetTree());
+        _ = RunAsync(transition, snapshots, runOptions, mutationError, tree);
         return transition;
     }
 
