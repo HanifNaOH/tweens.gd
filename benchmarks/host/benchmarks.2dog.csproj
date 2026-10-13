@@ -22,7 +22,7 @@
     </ItemGroup>
     <!-- Mirror the addon, including its committed .uid files: files removed from the source must not linger. -->
     <ItemGroup>
-      <StagedAddon Include="../addons/tweens_gd/**/*" />
+      <StagedAddon Include="../addons/tweens_gd/**/*" Exclude="../addons/tweens_gd/**/~*"/>
       <StaleAddon Include="@(StagedAddon)" Exclude="@(AddonSource->'../addons/tweens_gd/%(RecursiveDir)%(Filename)%(Extension)')" />
     </ItemGroup>
     <Delete Files="@(StaleAddon)" />
