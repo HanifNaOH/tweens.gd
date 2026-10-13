@@ -59,7 +59,7 @@ public sealed class LayoutController
             items = DiscoverItems();
             if (items.Length == 0) throw new ArgumentException("A layout update needs at least one item.");
             ValidateItems(items);
-            snapshots = Capture(items);
+            snapshots = Capture(root, items);
         }
         catch (Exception error)
         {
@@ -107,8 +107,8 @@ public sealed class LayoutController
         }
     }
 
-    private static Snapshot[] Capture(IEnumerable<LayoutItem> items)
-        => items.Select((item, index) => new Snapshot(item, index)).ToArray();
+    private static Snapshot[] Capture(Control root, IEnumerable<LayoutItem> items)
+        => items.Select((item, index) => new Snapshot(root, item, index)).ToArray();
 
     private async Task RunAsync(LayoutTransition transition, Snapshot[] snapshots, LayoutOptions options,
         Exception? mutationError, SceneTree tree)
@@ -292,16 +292,19 @@ public sealed class LayoutController
         var ordered = new List<Snapshot>();
         foreach (var item in DiscoverItems())
         {
-            if (!itemIsLive(item) || !bySlot.TryGetValue(item.LayoutControl.GetInstanceId(), out var existing)
+            if (!IsItemLive(root, item) || !bySlot.TryGetValue(item.LayoutControl.GetInstanceId(), out var existing)
                 || item.VisualControl != existing.Item.VisualControl) continue;
             ordered.Add(existing);
         }
         return ordered;
     }
 
-    private static bool itemIsLive(LayoutItem item)
-        => GodotObject.IsInstanceValid(item.LayoutControl) && GodotObject.IsInstanceValid(item.VisualControl)
+    private static bool IsItemLive(Control root, LayoutItem item)
+        => GodotObject.IsInstanceValid(root) && root.IsInsideTree() && !root.IsQueuedForDeletion()
+            && GodotObject.IsInstanceValid(item.LayoutControl) && GodotObject.IsInstanceValid(item.VisualControl)
+            && item.LayoutControl.IsInsideTree() && item.VisualControl.IsInsideTree()
             && !item.LayoutControl.IsQueuedForDeletion() && !item.VisualControl.IsQueuedForDeletion()
+            && (item.LayoutControl == root || root.IsAncestorOf(item.LayoutControl))
             && item.VisualControl.GetParent() == item.LayoutControl;
 
     private static void CaptureFinalRects(IEnumerable<Snapshot> snapshots)
@@ -347,7 +350,7 @@ public sealed class LayoutController
             var visual = snapshot.Item.VisualControl;
             if (GodotObject.IsInstanceValid(snapshot.Item.LayoutControl) && visual.GetParent() == snapshot.Item.LayoutControl)
             {
-                if (snapshot.Item.LayoutControl.IsInsideTree())
+                if (snapshot.ItemIsLive)
                 {
                     visual.GlobalPosition = snapshot.Item.LayoutControl.GlobalPosition;
                     visual.Size = snapshot.Item.LayoutControl.Size;
@@ -355,9 +358,10 @@ public sealed class LayoutController
                     snapshot.FinalSize = snapshot.Item.LayoutControl.Size;
                     snapshot.HasFinal = true;
                 }
-                else if (snapshot.HasFinal && visual.IsInsideTree()) visual.GlobalPosition = snapshot.FinalPosition;
-                else if (!visual.IsInsideTree()) visual.Position = Vector2.Zero;
-                else if (snapshot.HasFinal) visual.Size = snapshot.FinalSize;
+                else if (!snapshot.Item.LayoutControl.IsInsideTree() && snapshot.HasFinal && visual.IsInsideTree())
+                    visual.GlobalPosition = snapshot.FinalPosition;
+                else if (!snapshot.Item.LayoutControl.IsInsideTree() && !visual.IsInsideTree()) visual.Position = Vector2.Zero;
+                else if (!snapshot.Item.LayoutControl.IsInsideTree() && snapshot.HasFinal) visual.Size = snapshot.FinalSize;
                 visual.Scale = snapshot.OriginalScale;
             }
             visual.ZAsRelative = snapshot.OriginalZAsRelative;
@@ -388,8 +392,9 @@ public sealed class LayoutController
         }
     }
 
-    private sealed class Snapshot(LayoutItem item, int order)
+    private sealed class Snapshot(Control root, LayoutItem item, int order)
     {
+        private Control Root { get; } = root;
         public LayoutItem Item { get; } = item;
         public int Order { get; } = order;
         public Vector2 FirstPosition { get; } = item.VisualControl.GlobalPosition;
@@ -400,8 +405,6 @@ public sealed class LayoutController
         public Vector2 FinalPosition { get; set; }
         public Vector2 FinalSize { get; set; }
         public bool HasFinal { get; set; }
-        public bool ItemIsLive => GodotObject.IsInstanceValid(Item.LayoutControl) && GodotObject.IsInstanceValid(Item.VisualControl)
-            && !Item.LayoutControl.IsQueuedForDeletion() && !Item.VisualControl.IsQueuedForDeletion()
-            && Item.VisualControl.GetParent() == Item.LayoutControl;
+        public bool ItemIsLive => IsItemLive(Root, Item);
     }
 }

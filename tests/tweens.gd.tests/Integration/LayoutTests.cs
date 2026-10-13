@@ -194,6 +194,29 @@ public class LayoutTests(HeadlessFixture godot)
     }
 
     [Fact]
+    public async Task ReparentedSlotIsSkippedAfterLeavingControllerRoot()
+    {
+        using var scope = new SceneScope(godot);
+        var (root, slots, visuals) = MakeRow(scope, 2);
+        var outside = scope.Add(new Control { Position = new Vector2(320, 0) });
+        scope.Frames(2);
+        var movedPosition = new Vector2(410, 170);
+        var layout = Tweens.CreateLayout(root, new LayoutOptions { Duration = 0.08 });
+        var transition = layout.Update(container =>
+        {
+            container.RemoveChild(slots[0]);
+            outside.AddChild(slots[0]);
+            visuals[0].GlobalPosition = movedPosition;
+            root.QueueSort();
+        });
+
+        Assert.True(visuals[0].GlobalPosition.IsEqualApprox(movedPosition));
+        scope.FramesUntil(() => transition.End.IsCompleted, 100);
+        Assert.Equal(Reason.Completed, await transition.End);
+        Assert.True(visuals[0].GlobalPosition.IsEqualApprox(movedPosition));
+    }
+
+    [Fact]
     public async Task MutationFailureFaultsAfterSettlingTheLayout()
     {
         using var scope = new SceneScope(godot);
