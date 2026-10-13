@@ -11,7 +11,6 @@ namespace tweens.gd;
 public sealed class LayoutController
 {
     private const int MaxReflowFrames = 12;
-    private const int MaxZIndex = 4096;
     private readonly Control root;
     private readonly LayoutItem[]? explicitItems;
     private LayoutTransition? active;
@@ -146,7 +145,7 @@ public sealed class LayoutController
             for (var index = 0; index < matched.Count; index++)
             {
                 var snapshot = matched[index];
-                RaiseVisual(snapshot.Item.VisualControl, index, matched.Count);
+                RaiseVisual(snapshot.Item.VisualControl, index);
                 var delay = options.Delay.Seconds + index * options.StaggerEach;
                 var position = root.TweenFloat(1, options.Duration,
                     tween =>
@@ -336,10 +335,10 @@ public sealed class LayoutController
                 HoldFirstState(snapshots);
         }).CallDeferred();
 
-    private static void RaiseVisual(Control visual, int order, int count)
+    private static void RaiseVisual(Control visual, int order)
     {
-        visual.ZAsRelative = false;
-        visual.ZIndex = Math.Clamp(MaxZIndex - count + order + 1, -MaxZIndex, MaxZIndex);
+        visual.ZAsRelative = true;
+        visual.ZIndex = order;
     }
 
     private static void Settle(IEnumerable<Snapshot> snapshots)

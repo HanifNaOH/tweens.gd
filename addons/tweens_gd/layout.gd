@@ -5,7 +5,6 @@ const LayoutHandle = preload("layout_handle.gd")
 const LayoutItem = preload("layout_item.gd")
 const LayoutOptions = preload("layout_options.gd")
 const MAX_REFLOW_FRAMES := 12
-const MAX_Z_INDEX := 4096
 
 class Snapshot extends RefCounted:
 	var item: TweensGdLayoutItem
@@ -165,7 +164,7 @@ func _run_after_change(handle: TweensGdLayoutHandle, snapshots: Array[Snapshot],
 	var handles: Array[TweensGdHandle] = []
 	for index in matched.size():
 		var snapshot := matched[index]
-		_raise_visual(index, matched.size(), snapshot.item.visual_control)
+		_raise_visual(index, snapshot.item.visual_control)
 		var item_delay := run_options.delay + index * run_options.stagger_each
 		var position_definition := Tweens.value(0.0, 1.0, run_options.duration, run_options.ease, item_delay)
 		position_definition.on_update = func(_tween: TweensGdHandle, progress: float) -> void:
@@ -320,9 +319,9 @@ func _hold_first_state_if_active(handle: TweensGdLayoutHandle, snapshots: Array[
 		return
 	_hold_first_state(snapshots)
 
-func _raise_visual(order: int, count: int, visual: Control) -> void:
-	visual.z_as_relative = false
-	visual.z_index = clampi(MAX_Z_INDEX - count + order + 1, -MAX_Z_INDEX, MAX_Z_INDEX)
+func _raise_visual(order: int, visual: Control) -> void:
+	visual.z_as_relative = true
+	visual.z_index = order
 
 func _settle_snapshots(snapshots: Array[Snapshot]) -> void:
 	for snapshot in snapshots:
