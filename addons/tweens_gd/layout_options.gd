@@ -7,6 +7,7 @@ var delay := 0.0
 var ease: int = Out.QUAD
 var size_ease: Variant = null
 var stagger_each := 0.0
+var use_layout_z_order := false
 var playback: TweensGdPlaybackOptions
 var visual_path: NodePath = ^"Visual"
 
@@ -43,6 +44,7 @@ func copy() -> TweensGdLayoutOptions:
 	copied.ease = ease
 	copied.size_ease = size_ease
 	copied.stagger_each = stagger_each
+	copied.use_layout_z_order = use_layout_z_order
 	copied.visual_path = visual_path
 	if playback != null:
 		copied.playback = Tweens.playback_options(playback.process_mode, playback.pause_mode, playback.use_unscaled_time)

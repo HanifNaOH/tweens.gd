@@ -77,6 +77,7 @@ Only items present before the mutation and still paired with the same slot are a
 | `ease`         | `int`                               | `Out.QUAD`  | Position easing                                      |
 | `size_ease`    | `int` or `null`                     | `null`      | Size easing; uses `ease` when unset                  |
 | `stagger_each` | `float`                             | `0.0`       | Additional delay per item in current layout order    |
+| `use_layout_z_order` | `bool`                         | `false`     | Temporarily match visual Z indices to item order; restore original values |
 | `playback`     | `TweensGdPlaybackOptions` or `null` | `null`      | Playback policy; `null` uses the default policy      |
 | `visual_path`  | `NodePath`                          | `^"Visual"` | Direct-child visual name used by automatic discovery |
 

@@ -12,6 +12,7 @@ public sealed record LayoutOptions
     public EaseType Ease { get; init; } = Out.Quad;
     public EaseType? SizeEase { get; init; }
     public double StaggerEach { get; init; }
+    public bool UseLayoutZOrder { get; init; }
     public PlaybackOptions Playback { get; init; }
     public NodePath VisualPath { get; init; } = new("Visual");
 

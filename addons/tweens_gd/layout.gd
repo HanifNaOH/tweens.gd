@@ -14,7 +14,7 @@ class Snapshot extends RefCounted:
 	var original_scale := Vector2.ONE
 	var original_z_index := 0
 	var original_z_as_relative := true
-	var order := 0
+	var z_order_changed := false
 	var final_global_position := Vector2.ZERO
 	var final_size := Vector2.ZERO
 	var has_final := false
@@ -32,7 +32,8 @@ func _init(root: Control = null, layout_options: TweensGdLayoutOptions = null,
 		options = layout_options.copy()
 	if use_explicit_items or not explicit_items.is_empty():
 		_uses_explicit_items = true
-		_explicit_items.assign(explicit_items)
+		for item in explicit_items:
+			_explicit_items.append(item)
 
 func update(change: Callable, transition_options: TweensGdLayoutOptions = null) -> TweensGdLayoutHandle:
 	if active:
@@ -104,8 +105,7 @@ func _validate_items(items: Array[TweensGdLayoutItem]) -> String:
 
 func _capture(items: Array[TweensGdLayoutItem]) -> Array[Snapshot]:
 	var snapshots: Array[Snapshot] = []
-	for index in items.size():
-		var item := items[index]
+	for item in items:
 		var snapshot := Snapshot.new()
 		snapshot.item = item
 		snapshot.first_global_position = item.visual_control.global_position
@@ -114,7 +114,6 @@ func _capture(items: Array[TweensGdLayoutItem]) -> Array[Snapshot]:
 		snapshot.original_scale = item.visual_control.scale
 		snapshot.original_z_index = item.visual_control.z_index
 		snapshot.original_z_as_relative = item.visual_control.z_as_relative
-		snapshot.order = index
 		snapshots.append(snapshot)
 	return snapshots
 
@@ -164,7 +163,8 @@ func _run_after_change(handle: TweensGdLayoutHandle, snapshots: Array[Snapshot],
 	var handles: Array[TweensGdHandle] = []
 	for index in matched.size():
 		var snapshot := matched[index]
-		_raise_visual(index, snapshot.item.visual_control)
+		if run_options.use_layout_z_order:
+			_raise_visual(index, snapshot)
 		var item_delay := run_options.delay + index * run_options.stagger_each
 		var position_definition := Tweens.value(0.0, 1.0, run_options.duration, run_options.ease, item_delay)
 		position_definition.on_update = func(_tween: TweensGdHandle, progress: float) -> void:
@@ -251,15 +251,13 @@ func _matching_snapshots(snapshots: Array[Snapshot]) -> Array[Snapshot]:
 		if is_instance_valid(snapshot.item.layout_control):
 			by_slot[snapshot.item.layout_control.get_instance_id()] = snapshot
 	var matched: Array[Snapshot] = []
-	for index in current_items.size():
-		var item := current_items[index]
+	for item in current_items:
 		if not item.validate(_root).is_empty():
 			continue
 		var slot_id := item.layout_control.get_instance_id()
 		if by_slot.has(slot_id):
 			var snapshot: Snapshot = by_slot[slot_id]
 			if item.visual_control == snapshot.item.visual_control:
-				snapshot.order = index
 				matched.append(snapshot)
 	return matched
 
@@ -319,9 +317,11 @@ func _hold_first_state_if_active(handle: TweensGdLayoutHandle, snapshots: Array[
 		return
 	_hold_first_state(snapshots)
 
-func _raise_visual(order: int, visual: Control) -> void:
+func _raise_visual(order: int, snapshot: Snapshot) -> void:
+	var visual := snapshot.item.visual_control
 	visual.z_as_relative = true
 	visual.z_index = order
+	snapshot.z_order_changed = true
 
 func _settle_snapshots(snapshots: Array[Snapshot]) -> void:
 	for snapshot in snapshots:
@@ -346,5 +346,6 @@ func _settle_snapshots(snapshots: Array[Snapshot]) -> void:
 				visual.position = snapshot.first_local_position
 				visual.size = snapshot.first_size
 			visual.scale = snapshot.original_scale
-		visual.z_as_relative = snapshot.original_z_as_relative
-		visual.z_index = snapshot.original_z_index
+		if snapshot.z_order_changed:
+			visual.z_as_relative = snapshot.original_z_as_relative
+			visual.z_index = snapshot.original_z_index

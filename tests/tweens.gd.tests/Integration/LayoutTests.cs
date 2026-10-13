@@ -217,6 +217,75 @@ public class LayoutTests(HeadlessFixture godot)
     }
 
     [Fact]
+    public async Task FreeingRootDuringMutationReturnsOwnerExitedImmediately()
+    {
+        using var scope = new SceneScope(godot);
+        var (root, _, _) = MakeRow(scope, 2);
+        scope.Frames(2);
+        var layout = Tweens.CreateLayout(root);
+
+        var transition = layout.Update(container => container.Free());
+
+        Assert.True(transition.IsTerminal);
+        Assert.Equal(Reason.OwnerExited, await transition.End);
+        Assert.False(layout.IsActive);
+    }
+
+    [Fact]
+    public async Task TransitionPreservesCustomVisualDrawOrder()
+    {
+        using var scope = new SceneScope(godot);
+        var (root, slots, visuals) = MakeRow(scope, 2);
+        scope.Frames(2);
+        visuals[0].ZIndex = 100;
+        visuals[0].ZAsRelative = false;
+        visuals[1].ZIndex = -100;
+        visuals[1].ZAsRelative = true;
+        var layout = Tweens.CreateLayout(root, new LayoutOptions { Duration = 0.3 });
+        var transition = layout.Update(container =>
+        {
+            container.MoveChild(slots[1], 0);
+            root.QueueSort();
+        });
+
+        scope.FramesUntil(() => transition.IsAnimating, 80);
+        Assert.True(transition.IsAnimating);
+        Assert.Equal((100, false), (visuals[0].ZIndex, visuals[0].ZAsRelative));
+        Assert.Equal((-100, true), (visuals[1].ZIndex, visuals[1].ZAsRelative));
+        transition.Cancel();
+        Assert.Equal(Reason.Cancelled, await transition.End);
+        Assert.Equal((100, false), (visuals[0].ZIndex, visuals[0].ZAsRelative));
+        Assert.Equal((-100, true), (visuals[1].ZIndex, visuals[1].ZAsRelative));
+    }
+
+    [Fact]
+    public async Task OptInLayoutZOrderRestoresVisualSettingsAfterCancellation()
+    {
+        using var scope = new SceneScope(godot);
+        var (root, slots, visuals) = MakeRow(scope, 2);
+        scope.Frames(2);
+        visuals[0].ZIndex = 100;
+        visuals[0].ZAsRelative = false;
+        visuals[1].ZIndex = -100;
+        visuals[1].ZAsRelative = true;
+        var layout = Tweens.CreateLayout(root, new LayoutOptions { Duration = 0.3, UseLayoutZOrder = true });
+        var transition = layout.Update(container =>
+        {
+            container.MoveChild(slots[1], 0);
+            root.QueueSort();
+        });
+
+        scope.FramesUntil(() => transition.IsAnimating, 80);
+        Assert.True(transition.IsAnimating);
+        Assert.Equal((1, true), (visuals[0].ZIndex, visuals[0].ZAsRelative));
+        Assert.Equal((0, true), (visuals[1].ZIndex, visuals[1].ZAsRelative));
+        transition.Cancel();
+        Assert.Equal(Reason.Cancelled, await transition.End);
+        Assert.Equal((100, false), (visuals[0].ZIndex, visuals[0].ZAsRelative));
+        Assert.Equal((-100, true), (visuals[1].ZIndex, visuals[1].ZAsRelative));
+    }
+
+    [Fact]
     public async Task MutationFailureFaultsAfterSettlingTheLayout()
     {
         using var scope = new SceneScope(godot);

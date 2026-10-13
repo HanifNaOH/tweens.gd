@@ -72,6 +72,14 @@ public sealed class LayoutController
         try { change(root); }
         catch (Exception error) { mutationError = error; }
 
+        if (!RootIsLive())
+        {
+            Settle(snapshots);
+            active = null;
+            transition.Complete(Reason.OwnerExited);
+            return transition;
+        }
+
         HoldFirstState(snapshots);
         HoldFirstStateDeferred(transition, snapshots);
         _ = RunAsync(transition, snapshots, runOptions, mutationError, tree);
@@ -107,7 +115,7 @@ public sealed class LayoutController
     }
 
     private static Snapshot[] Capture(Control root, IEnumerable<LayoutItem> items)
-        => items.Select((item, index) => new Snapshot(root, item, index)).ToArray();
+        => [.. items.Select(item => new Snapshot(root, item))];
 
     private async Task RunAsync(LayoutTransition transition, Snapshot[] snapshots, LayoutOptions options,
         Exception? mutationError, SceneTree tree)
@@ -145,7 +153,7 @@ public sealed class LayoutController
             for (var index = 0; index < matched.Count; index++)
             {
                 var snapshot = matched[index];
-                RaiseVisual(snapshot.Item.VisualControl, index);
+                if (options.UseLayoutZOrder) RaiseVisual(snapshot, index);
                 var delay = options.Delay.Seconds + index * options.StaggerEach;
                 var position = root.TweenFloat(1, options.Duration,
                     tween =>
@@ -335,10 +343,12 @@ public sealed class LayoutController
                 HoldFirstState(snapshots);
         }).CallDeferred();
 
-    private static void RaiseVisual(Control visual, int order)
+    private static void RaiseVisual(Snapshot snapshot, int order)
     {
+        var visual = snapshot.Item.VisualControl;
         visual.ZAsRelative = true;
         visual.ZIndex = order;
+        snapshot.ZOrderChanged = true;
     }
 
     private static void Settle(IEnumerable<Snapshot> snapshots)
@@ -363,8 +373,11 @@ public sealed class LayoutController
                 else if (!snapshot.Item.LayoutControl.IsInsideTree() && snapshot.HasFinal) visual.Size = snapshot.FinalSize;
                 visual.Scale = snapshot.OriginalScale;
             }
-            visual.ZAsRelative = snapshot.OriginalZAsRelative;
-            visual.ZIndex = snapshot.OriginalZIndex;
+            if (snapshot.ZOrderChanged)
+            {
+                visual.ZAsRelative = snapshot.OriginalZAsRelative;
+                visual.ZIndex = snapshot.OriginalZIndex;
+            }
         }
     }
 
@@ -391,16 +404,16 @@ public sealed class LayoutController
         }
     }
 
-    private sealed class Snapshot(Control root, LayoutItem item, int order)
+    private sealed class Snapshot(Control root, LayoutItem item)
     {
         private Control Root { get; } = root;
         public LayoutItem Item { get; } = item;
-        public int Order { get; } = order;
         public Vector2 FirstPosition { get; } = item.VisualControl.GlobalPosition;
         public Vector2 FirstSize { get; } = item.VisualControl.Size;
         public Vector2 OriginalScale { get; } = item.VisualControl.Scale;
         public int OriginalZIndex { get; } = item.VisualControl.ZIndex;
         public bool OriginalZAsRelative { get; } = item.VisualControl.ZAsRelative;
+        public bool ZOrderChanged { get; set; }
         public Vector2 FinalPosition { get; set; }
         public Vector2 FinalSize { get; set; }
         public bool HasFinal { get; set; }

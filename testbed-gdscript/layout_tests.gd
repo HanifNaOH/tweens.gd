@@ -16,11 +16,13 @@ var _host: Suite
 func run(host: Node) -> bool:
 	_host = host
 	await _reorders_existing_items()
+	await _custom_visual_draw_order_is_preserved()
+	await _opt_in_layout_z_order_restores_visual_settings()
 	await _resizes_existing_items()
 	await _resizes_during_animation_follow_live_slot_bounds()
 	await _deferred_reflow_holds_visual_rects()
 	await _rejects_overlap_and_cancels_cleanly()
-	await _empty_auto_discovery_does_not_mutate()
+	_empty_auto_discovery_does_not_mutate()
 	await _zero_duration_repeated_updates_and_freed_slots()
 	await _invalid_configuration_does_not_mutate()
 	await _unstable_reflow_fails_within_bound()
@@ -93,6 +95,77 @@ func _reorders_existing_items() -> void:
 	for visual in visuals:
 		check(visual.z_index == 0 and visual.z_as_relative, "successful transition restores visual draw order")
 	check(layout.options.duration == defaults.duration, "per-update options do not mutate controller defaults")
+	root.queue_free()
+
+func _custom_visual_draw_order_is_preserved() -> void:
+	var scene := _make_container(false, 2)
+	var root := scene.root
+	var slots: Array[Control] = scene.slots
+	var visuals: Array[Control] = scene.visuals
+	await _wait_frames(2)
+	visuals[0].z_index = 100
+	visuals[0].z_as_relative = false
+	visuals[1].z_index = -100
+	visuals[1].z_as_relative = true
+	var options := TweensGdLayoutOptions.new()
+	options.duration = 0.3
+	var layout := T.create_layout(root, options)
+	var transition := layout.update(func(_container: Control) -> void:
+		root.move_child(slots[1], 0)
+		root.queue_sort()
+	)
+	var waited := 0
+	while not transition.is_animating and waited < 80:
+		await _wait_frames(1)
+		waited += 1
+	check(transition.is_animating, "draw-order test reaches the animation phase")
+	check(visuals[0].z_index == 100 and not visuals[0].z_as_relative,
+		"transition preserves first visual Z settings during animation")
+	check(visuals[1].z_index == -100 and visuals[1].z_as_relative,
+		"transition preserves second visual Z settings during animation")
+	transition.cancel()
+	var reason: int = await transition.end
+	check(reason == T.Reason.CANCELLED, "draw-order test cancels cleanly")
+	check(visuals[0].z_index == 100 and not visuals[0].z_as_relative,
+		"transition preserves first visual Z settings after cancellation")
+	check(visuals[1].z_index == -100 and visuals[1].z_as_relative,
+		"transition preserves second visual Z settings after cancellation")
+	root.queue_free()
+
+func _opt_in_layout_z_order_restores_visual_settings() -> void:
+	var scene := _make_container(false, 2)
+	var root := scene.root
+	var slots: Array[Control] = scene.slots
+	var visuals: Array[Control] = scene.visuals
+	await _wait_frames(2)
+	visuals[0].z_index = 100
+	visuals[0].z_as_relative = false
+	visuals[1].z_index = -100
+	visuals[1].z_as_relative = true
+	var options := TweensGdLayoutOptions.new()
+	options.duration = 0.3
+	options.use_layout_z_order = true
+	var layout := T.create_layout(root, options)
+	var transition := layout.update(func(_container: Control) -> void:
+		root.move_child(slots[1], 0)
+		root.queue_sort()
+	)
+	var waited := 0
+	while not transition.is_animating and waited < 80:
+		await _wait_frames(1)
+		waited += 1
+	check(transition.is_animating, "opt-in draw-order test reaches the animation phase")
+	check(visuals[0].z_index == 1 and visuals[0].z_as_relative,
+		"opt-in layout order is applied to the first visual")
+	check(visuals[1].z_index == 0 and visuals[1].z_as_relative,
+		"opt-in layout order is applied to the second visual")
+	transition.cancel()
+	var reason: int = await transition.end
+	check(reason == T.Reason.CANCELLED, "opt-in draw-order test cancels cleanly")
+	check(visuals[0].z_index == 100 and not visuals[0].z_as_relative,
+		"cancellation restores first visual Z settings")
+	check(visuals[1].z_index == -100 and visuals[1].z_as_relative,
+		"cancellation restores second visual Z settings")
 	root.queue_free()
 
 func _resizes_existing_items() -> void:
