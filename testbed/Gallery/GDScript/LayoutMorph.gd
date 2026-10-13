@@ -15,12 +15,10 @@ func animate() -> void:
 	options.size_ease = Out.CUBIC
 	options.stagger_each = 0.15
 	var layout := Tweens.create_layout(grid, options)
-	var pattern := 1
 	while true:
-		var next := pattern % 4 + 1
+		var next: int = int(grid.get_meta("pattern", 1)) % 4 + 1
 		var transition := layout.update(func(_root: Control) -> void:
-			pattern = next
-			grid.set_meta("pattern", pattern)
+			grid.set_meta("pattern", next)
 			grid.queue_sort()
 		)
 		if await transition.end != Tweens.Reason.COMPLETED:

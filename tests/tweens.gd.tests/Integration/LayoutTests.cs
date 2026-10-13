@@ -93,37 +93,44 @@ public class LayoutTests(HeadlessFixture godot)
     }
 
     [Fact]
-    public async Task ResizeDuringAnimationFollowsTheLiveSlotBounds()
+    public async Task RepeatedResizeDuringAnimationFollowsCurrentSlotBounds()
     {
         using var scope = new SceneScope(godot);
         var (root, slots, visuals) = MakeRow(scope, 2);
         foreach (var slot in slots) slot.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         scope.Frames(2);
 
-        var layout = Tweens.CreateLayout(root, new LayoutOptions { Duration = 0.3 });
+        var layout = Tweens.CreateLayout(root, new LayoutOptions { Duration = 0.08 });
         var transition = layout.Update(container =>
         {
             container.MoveChild(slots[1], 0);
             root.QueueSort();
         });
         scope.FramesUntil(() => transition.IsAnimating, 80);
-        for (var frame = 0; frame < 24; frame++)
+        var resizing = false;
+        var resizeFrame = 0;
+        var resizeTimer = new Godot.Timer { WaitTime = 0.001, OneShot = false };
+        resizeTimer.Timeout += () =>
         {
-            root.Size = new Vector2(340 + frame * 8, 240);
+            if (!resizing) return;
+            root.Size = new Vector2(340 + resizeFrame++ * 8, 240);
             root.QueueSort();
-            scope.Frames(1);
-        }
-        Assert.True(transition.IsAnimating);
-
-        scope.FramesUntil(() => transition.End.IsCompleted, 200);
-        Assert.Equal(Reason.Completed, await transition.End);
+        };
+        root.AddChild(resizeTimer);
+        resizing = true;
+        resizeTimer.Start();
+        scope.Frames(24);
+        resizeTimer.Stop();
+        Assert.True(transition.IsAnimating,
+            $"Transition ended after {resizeFrame} resizes: reason={transition.CompletionReason}, error={transition.Error}");
         for (var index = 0; index < slots.Length; index++)
         {
-            var visualRect = visuals[index].GetGlobalRect();
-            var slotRect = slots[index].GetGlobalRect();
-            Assert.True(visualRect.Position.IsEqualApprox(slotRect.Position));
-            Assert.True(visualRect.Size.IsEqualApprox(slotRect.Size));
+            Assert.True(visuals[index].GlobalPosition.IsEqualApprox(slots[index].GlobalPosition));
+            Assert.True(visuals[index].Size.IsEqualApprox(slots[index].Size));
         }
+
+        scope.FramesUntil(() => transition.End.IsCompleted, 40);
+        Assert.Equal(Reason.Completed, await transition.End);
     }
 
     [Fact]

@@ -61,6 +61,61 @@ public class GalleryRenderingTests
     }
 
     [Theory]
+    [InlineData(GalleryLanguage.CSharp)] [InlineData(GalleryLanguage.GDScript)]
+    public void LayoutExampleKeepsAnimatingWhenFullscreenResizesItsViewport(GalleryLanguage language)
+    {
+        var window = godot.Tree.Root;
+        var originalSize = window.Size;
+        var gallery = new Gallery();
+        gallery.SelectLanguage(language);
+        godot.Tree.Root.AddChild(gallery);
+        gallery.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        gallery.SetLegDuration(0.6);
+        var remainedFullscreen = false;
+        var sequenceCompleted = false;
+        var patternChanged = false;
+        try
+        {
+            gallery.SelectPage(11);
+            for (var frame = 0; frame < 8; frame++) godot.Engine.Iteration();
+            var page = gallery.CurrentPage!;
+            var sequence = Assert.IsAssignableFrom<Task>(page.SequenceTask);
+            var grid = page.Effects[0].SceneTargets["grid"].As<Control>();
+            var csharpScheduler = TweenRuntime.GetRunner(gallery).Scheduler;
+            GodotObject? gdscriptScheduler = null;
+            if (language == GalleryLanguage.GDScript)
+                gdscriptScheduler = godot.Tree.GetMeta("_tweens_gd_runner").AsGodotObject().Get("scheduler").AsGodotObject();
+            if (language == GalleryLanguage.CSharp) csharpScheduler.Update(0.2);
+            else gdscriptScheduler!.Call("update", 0.2);
+            var initialPattern = grid.GetMeta("pattern").AsInt32();
+            var fullscreen = Descendants(page).OfType<Button>().Single(button => button.Text == "Fullscreen");
+            fullscreen.EmitSignal(BaseButton.SignalName.Pressed);
+            window.Size = new Vector2I(1920, 1080);
+
+            for (var frame = 0; frame < 90 && !sequence.IsCompleted; frame++)
+            {
+                godot.Engine.Iteration();
+                if (language == GalleryLanguage.CSharp) csharpScheduler.Update(0.05);
+                else gdscriptScheduler!.Call("update", 0.05);
+                if (grid.GetMeta("pattern").AsInt32() != initialPattern) patternChanged = true;
+            }
+            remainedFullscreen = gallery.IsFullscreen;
+            sequenceCompleted = sequence.IsCompleted;
+        }
+        finally
+        {
+            if (gallery.IsFullscreen) gallery.ExitFullscreen();
+            gallery.Free();
+            window.Size = originalSize;
+            for (var frame = 0; frame < 3; frame++) godot.Engine.Iteration();
+        }
+        Assert.Empty(godot.Errors.Drain());
+        Assert.True(remainedFullscreen);
+        Assert.False(sequenceCompleted, "The layout animation should survive the fullscreen resize.");
+        Assert.True(patternChanged, "The layout should continue cycling after fullscreen changes its viewport.");
+    }
+
+    [Theory]
     [InlineData(0, GalleryLanguage.CSharp)] [InlineData(1, GalleryLanguage.CSharp)]
     [InlineData(2, GalleryLanguage.CSharp)] [InlineData(3, GalleryLanguage.CSharp)]
     [InlineData(4, GalleryLanguage.CSharp)] [InlineData(5, GalleryLanguage.CSharp)]

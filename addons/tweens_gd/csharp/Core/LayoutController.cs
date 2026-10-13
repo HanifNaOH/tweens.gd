@@ -200,7 +200,8 @@ public sealed class LayoutController
                     transition.Complete(Reason.Cancelled);
                     return;
                 }
-                if (!finalRectsStable) throw new InvalidOperationException("The layout transition stopped before its targets settled.");
+                if (!finalRectsStable)
+                    throw new InvalidOperationException("The layout transition stopped before its targets settled.");
             }
             Settle(snapshots);
             transition.Complete(reason);
@@ -307,9 +308,8 @@ public sealed class LayoutController
         foreach (var snapshot in snapshots)
         {
             if (!snapshot.ItemIsLive) continue;
-            var rect = snapshot.Item.LayoutControl.GetGlobalRect();
-            snapshot.FinalPosition = rect.Position;
-            snapshot.FinalSize = rect.Size;
+            snapshot.FinalPosition = snapshot.Item.LayoutControl.GlobalPosition;
+            snapshot.FinalSize = snapshot.Item.LayoutControl.Size;
             snapshot.HasFinal = true;
         }
     }
@@ -322,31 +322,6 @@ public sealed class LayoutController
             snapshot.Item.VisualControl.GlobalPosition = snapshot.FirstPosition;
             snapshot.Item.VisualControl.Size = snapshot.FirstSize;
             snapshot.Item.VisualControl.Scale = snapshot.OriginalScale;
-        }
-    }
-
-    private static void ApplyPositionProgress(Snapshot snapshot, float progress)
-    {
-        if (!snapshot.ItemIsLive) return;
-        var rect = snapshot.Item.LayoutControl.GetGlobalRect();
-        snapshot.Item.VisualControl.GlobalPosition = snapshot.FirstPosition.Lerp(rect.Position, progress);
-    }
-
-    private static void ApplySizeProgress(Snapshot snapshot, float progress)
-    {
-        if (!snapshot.ItemIsLive) return;
-        var rect = snapshot.Item.LayoutControl.GetGlobalRect();
-        snapshot.Item.VisualControl.Size = snapshot.FirstSize.Lerp(rect.Size, progress);
-    }
-
-    private static void ApplyCurrentRects(IEnumerable<Snapshot> snapshots)
-    {
-        foreach (var snapshot in snapshots)
-        {
-            if (!snapshot.ItemIsLive) continue;
-            var rect = snapshot.Item.LayoutControl.GetGlobalRect();
-            snapshot.Item.VisualControl.GlobalPosition = rect.Position;
-            snapshot.Item.VisualControl.Size = rect.Size;
         }
     }
 
@@ -373,24 +348,42 @@ public sealed class LayoutController
             {
                 if (snapshot.Item.LayoutControl.IsInsideTree())
                 {
-                    var rect = snapshot.Item.LayoutControl.GetGlobalRect();
-                    if (visual.IsInsideTree()) visual.GlobalPosition = rect.Position;
-                    else visual.Position = Vector2.Zero;
-                    visual.Size = rect.Size;
-                    snapshot.FinalPosition = rect.Position;
-                    snapshot.FinalSize = rect.Size;
+                    visual.GlobalPosition = snapshot.Item.LayoutControl.GlobalPosition;
+                    visual.Size = snapshot.Item.LayoutControl.Size;
+                    snapshot.FinalPosition = snapshot.Item.LayoutControl.GlobalPosition;
+                    snapshot.FinalSize = snapshot.Item.LayoutControl.Size;
                     snapshot.HasFinal = true;
                 }
-                else if (snapshot.HasFinal)
-                {
-                    if (visual.IsInsideTree()) visual.GlobalPosition = snapshot.FinalPosition;
-                    else visual.Position = Vector2.Zero;
-                    visual.Size = snapshot.FinalSize;
-                }
+                else if (snapshot.HasFinal && visual.IsInsideTree()) visual.GlobalPosition = snapshot.FinalPosition;
+                else if (!visual.IsInsideTree()) visual.Position = Vector2.Zero;
+                else if (snapshot.HasFinal) visual.Size = snapshot.FinalSize;
                 visual.Scale = snapshot.OriginalScale;
             }
             visual.ZAsRelative = snapshot.OriginalZAsRelative;
             visual.ZIndex = snapshot.OriginalZIndex;
+        }
+    }
+
+    private static void ApplyPositionProgress(Snapshot snapshot, float progress)
+    {
+        if (snapshot.ItemIsLive)
+            snapshot.Item.VisualControl.GlobalPosition = snapshot.FirstPosition.Lerp(
+                snapshot.Item.LayoutControl.GlobalPosition, progress);
+    }
+
+    private static void ApplySizeProgress(Snapshot snapshot, float progress)
+    {
+        if (snapshot.ItemIsLive)
+            snapshot.Item.VisualControl.Size = snapshot.FirstSize.Lerp(snapshot.Item.LayoutControl.Size, progress);
+    }
+
+    private static void ApplyCurrentRects(IEnumerable<Snapshot> snapshots)
+    {
+        foreach (var snapshot in snapshots)
+        {
+            if (!snapshot.ItemIsLive) continue;
+            snapshot.Item.VisualControl.GlobalPosition = snapshot.Item.LayoutControl.GlobalPosition;
+            snapshot.Item.VisualControl.Size = snapshot.Item.LayoutControl.Size;
         }
     }
 

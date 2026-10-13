@@ -33,8 +33,7 @@ func _init(root: Control = null, layout_options: TweensGdLayoutOptions = null, e
 	if explicit_items != null:
 		_uses_explicit_items = true
 		if explicit_items is Array:
-			var item_array: Array = explicit_items
-			_explicit_items.assign(item_array)
+			_explicit_items.assign(explicit_items)
 
 func update(change: Callable, transition_options: TweensGdLayoutOptions = null) -> TweensGdLayoutHandle:
 	if active:
@@ -270,7 +269,7 @@ func _layout_rects(snapshots: Array[Snapshot]) -> Array[Rect2]:
 	for snapshot in snapshots:
 		if snapshot.item.validate(_root).is_empty():
 			var slot := snapshot.item.layout_control
-			rects.append(Rect2(slot.global_position, slot.size))
+			rects.append(slot.get_global_rect())
 	return rects
 
 func _same_rects(a: Array[Rect2], b: Array[Rect2]) -> bool:
@@ -292,22 +291,20 @@ func _capture_final_rects(snapshots: Array[Snapshot]) -> void:
 func _apply_position_progress(snapshot: Snapshot, progress: float) -> void:
 	if not snapshot.item.validate(_root).is_empty():
 		return
-	var rect := snapshot.item.layout_control.get_global_rect()
-	snapshot.item.visual_control.global_position = snapshot.first_global_position.lerp(rect.position, progress)
+	snapshot.item.visual_control.global_position = snapshot.first_global_position.lerp(
+		snapshot.item.layout_control.global_position, progress)
 
 func _apply_size_progress(snapshot: Snapshot, progress: float) -> void:
 	if not snapshot.item.validate(_root).is_empty():
 		return
-	var rect := snapshot.item.layout_control.get_global_rect()
-	snapshot.item.visual_control.size = snapshot.first_size.lerp(rect.size, progress)
+	snapshot.item.visual_control.size = snapshot.first_size.lerp(snapshot.item.layout_control.size, progress)
 
 func _apply_current_rects(snapshots: Array[Snapshot]) -> void:
 	for snapshot in snapshots:
 		if not snapshot.item.validate(_root).is_empty():
 			continue
-		var rect := snapshot.item.layout_control.get_global_rect()
-		snapshot.item.visual_control.global_position = rect.position
-		snapshot.item.visual_control.size = rect.size
+		snapshot.item.visual_control.global_position = snapshot.item.layout_control.global_position
+		snapshot.item.visual_control.size = snapshot.item.layout_control.size
 
 func _hold_first_state(snapshots: Array[Snapshot]) -> void:
 	for snapshot in snapshots:
@@ -335,14 +332,10 @@ func _settle_snapshots(snapshots: Array[Snapshot]) -> void:
 		var slot := snapshot.item.layout_control
 		if is_instance_valid(slot) and visual.get_parent() == slot:
 			if slot.is_inside_tree():
-				var rect := slot.get_global_rect()
-				if visual.is_inside_tree():
-					visual.global_position = rect.position
-				else:
-					visual.position = Vector2.ZERO
-				visual.size = rect.size
-				snapshot.final_global_position = rect.position
-				snapshot.final_size = rect.size
+				visual.global_position = slot.global_position
+				visual.size = slot.size
+				snapshot.final_global_position = slot.global_position
+				snapshot.final_size = slot.size
 				snapshot.has_final = true
 			elif snapshot.has_final:
 				if visual.is_inside_tree():
