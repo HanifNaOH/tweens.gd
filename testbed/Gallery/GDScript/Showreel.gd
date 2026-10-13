@@ -22,6 +22,8 @@ const BAR = 4 * BEAT
 const HOP = 0.6
 const STRETCHED = Vector3(1.1, 0.92, 1)
 const SQUEEZED = Vector3(0.92, 1.08, 1)
+# Each move starts and ends at rest without a jolt: velocity and acceleration are zero at every shot.
+const GLIDE := InOut.SMOOTHER_STEP
 
 # The cue sheet: when each scene starts on the track. Times in a scene count from its cue, so moving a cue moves the
 # scene with its camera shots and the dot's path through it. The opening is tied to the start of the loop.
@@ -55,7 +57,7 @@ func journey() -> Array[TweensGdGroup]:
 	var plays: Array[TweensGdGroup] = [
 		Tweens.animate(targets.fade, fade()),
 		Tweens.animate(targets.rig, rig()),
-		Tweens.animate(targets.camera, lens()),
+		Tweens.animate(targets.lens, lens()),
 		# One definition moves both the dot and the emitter that lays its trail.
 		Tweens.animate(targets.dot, path),
 		Tweens.animate(targets.trail, path),
@@ -165,9 +167,10 @@ func landing(i: int) -> float: return cue(Scene.BOUNCE) + HOP + BEAT * i - (EIGH
 func takeoff() -> float: return landing(0) - BEAT
 func stretch(i: int) -> float: return cue(Scene.ELASTIC) + 3 * BEAT + EIGHTH * i
 func waypoint(i: int) -> float: return cue(Scene.KEYFRAMES) + BEAT * i
-# When the dot walks from FROM to TO, runs up to BOUNCE, and becomes the wordmark's period.
+# When the dot walks from FROM to TO, runs up to BOUNCE, stops in front of the wordmark, and becomes its period.
 func walk() -> float: return cue(Scene.FROM_TO) + 2 * BEAT
 func run_up() -> float: return cue(Scene.BOUNCE) - 3 * BEAT
+func parked() -> float: return cue(Scene.WORDMARK) + 2 * BEAT
 func dotted() -> float: return cue(Scene.WORDMARK) + BAR
 
 ## A page point on a station, in the world.
@@ -196,24 +199,24 @@ func standing(at: float, easing: int, duration := 0.5) -> Dictionary:
 
 ## Where the camera looks: the rig sits on the target and turns, and the camera backs away from it by the distance.
 ## Target and turn are relative to the scene's station, so each scene is framed as if unturned. [param at] counts
-## seconds from the scene's cue.
+## seconds from the scene's cue. The camera glides into a shot unless it names another easing.
 func shot(scene: Scene, at: float, target: Vector3, turn: Vector3, distance: float, easing: Variant = null) -> Dictionary:
 	return {"scene": scene, "at": at, "target": target, "turn": turn, "distance": distance, "easing": easing}
 
-## A shot in the same scene as the one before it, [param seconds] later.
-func after(seconds: float, target: Vector3, turn: Vector3, distance: float, easing: Variant = null) -> Dictionary:
-	return {"scene": null, "at": seconds, "target": target, "turn": turn, "distance": distance, "easing": easing}
+## A shot in the same scene as the one before it, [param gap] seconds later.
+func after(gap: float, target: Vector3, turn: Vector3, distance: float, easing: Variant = null) -> Dictionary:
+	return {"scene": null, "at": gap, "target": target, "turn": turn, "distance": distance, "easing": easing}
 
 func shots() -> Array[Dictionary]:
-	# Each station word gets a close-up as it stands, each definition a wider frame, and each punch line a close one.
-	# Moves take a second or more and start early, so the camera arrives as things happen. A shot with a scene is
-	# timed from that scene's cue; after() follows the shot before it, with the seconds the camera takes to move into it.
+	# Each station word gets a close-up as it stands, each definition a wider frame, and each punch line a close one
+	# that drifts after the leaving dot. Moves take a second or more and start early, so the camera arrives as things
+	# happen. A shot with a scene is timed from its cue; after() follows the shot before it by the seconds of the move.
 	return [
 		# Up at the dot in the sky, then down to the page with it.
 		shot(Scene.OPENING, 0.0, Vector3(-2.06, 2.1, 0), Vector3(25, -4, 0), 4.4),
 		after(2.6, Vector3(-2.06, 2.15, 0), Vector3(23, 2, 0), 4.4),
 		after(1.4, Vector3(-2.06, 2.1, 0), Vector3(22, 0, 0), 4.4),
-		after(1.2, Vector3(-1.9, 0.4, 0.1), Vector3(-22, -10, 0), 4.2, InOut.CUBIC),
+		after(1.2, Vector3(-1.9, 0.4, 0.1), Vector3(-22, -10, 0), 4.2),
 		# FROM, the definition, and the punch line, held until its words have nearly blown away.
 		shot(Scene.FROM_TO, -0.805, Vector3(-2, 0.32, -0.45), Vector3(-14, -6, 0), 3.0),
 		after(0.8, Vector3(-2.06, 0.34, -0.6), Vector3(-15, -4, 0), 2.4),
@@ -221,9 +224,9 @@ func shots() -> Array[Dictionary]:
 		after(1.8, Vector3(-0.3, 0.1, 0.5), Vector3(-30, -4, 0), 5.0),
 		after(1.1, Vector3(-0.1, 0.1, 0.5), Vector3(-30, -2, 0), 5.0),
 		after(1.25, Vector3(-0.6, 0, 0.3), Vector3(-34, 0, 0), 3.9),
-		after(4.15, Vector3(-0.45, 0.1, 0.3), Vector3(-34, 1, 0), 3.8, InOut.SINE),
+		after(4.15, Vector3(0.4, 0.1, 0.3), Vector3(-34, 1, 0), 4.6),
 		# A slow pan over to EASE and its definition as its last letter stands, and the punch line.
-		shot(Scene.EASE, 3.17, Vector3(5.6, 0, 0.4), Vector3(-30, 2, 0), 5.0, InOut.SINE),
+		shot(Scene.EASE, 3.17, Vector3(5.6, 0, 0.4), Vector3(-30, 2, 0), 5.0),
 		after(0.9, Vector3(5.7, 0, 0.4), Vector3(-30, 2, 0), 5.0),
 		after(0.75, Vector3(5.1, 0, 0.1), Vector3(-34, 0, 0), 4.2),
 		after(2.35, Vector3(5.2, 0, 0.1), Vector3(-34, 1, 0), 4.05),
@@ -232,28 +235,28 @@ func shots() -> Array[Dictionary]:
 		after(1.85, Vector3(10.7, 0, 0.6), Vector3(-30, 0, 0), 4.8),
 		after(1.2, Vector3(10.5, 0.48, 0), Vector3(4, -3, 0), 3.5),
 		shot(Scene.BOUNCE, HOP, Vector3(10.5, 0.48, 0), Vector3(4, -2.5, 0), 3.5),
-		after(0.4, Vector3(10.5, 0.48, 0), Vector3(4, -2, 0), 3.15, Out.BACK),
+		after(0.4, Vector3(10.5, 0.48, 0), Vector3(4, -2, 0), 3.15),
 		after(2.395, Vector3(10.9, 0.48, 0), Vector3(4, 1, 0), 3.3),
 		after(1.1, Vector3(10.5, 0, 0.4), Vector3(-34, 0, 0), 3.9),
-		after(2.15, Vector3(10.65, 0, 0.4), Vector3(-34, 1, 0), 3.8),
+		after(2.15, Vector3(11.6, 0, 0.4), Vector3(-34, 1, 0), 3.8),
 		# ELASTIC, the definition, and the punch line.
 		shot(Scene.ELASTIC, 1.645, Vector3(15.3, 0.3, -0.4), Vector3(-12, 0, 0), 3.2),
 		after(0.4, Vector3(15.4, 0.3, -0.4), Vector3(-12, 0, 0), 3.2),
 		after(0.8, Vector3(16.1, 0, 0.5), Vector3(-28, 0, 0), 5.0),
 		after(0.6, Vector3(16.2, 0, 0.5), Vector3(-28, 0, 0), 5.0),
 		after(0.9, Vector3(15.6, 0, 0.2), Vector3(-34, 0, 0), 3.9),
-		after(2.3, Vector3(15.75, 0, 0.2), Vector3(-34, 1, 0), 3.8),
+		after(2.3, Vector3(16.5, 0, 0.2), Vector3(-34, 1, 0), 3.8),
 		# Along KEYFRAMES as its letters stand, the definition, the punch line, and on to the wordmark.
 		shot(Scene.KEYFRAMES, 0.67, Vector3(20, 0.25, -0.2), Vector3(-24, -8, 0), 3.0),
 		after(1.55, Vector3(21, 0.25, -0.2), Vector3(-24, -2, 0), 3.0),
 		after(0.7, Vector3(21.6, 0, 0.6), Vector3(-30, 0, 0), 4.8),
 		after(0.75, Vector3(21.7, 0, 0.6), Vector3(-30, 1, 0), 4.8),
 		after(0.85, Vector3(21.25, 0, 0.3), Vector3(-34, 0, 0), 3.9),
-		after(2.1, Vector3(21.4, 0, 0.3), Vector3(-34, 1, 0), 3.8),
+		after(2.1, Vector3(22.2, 0, 0.3), Vector3(-34, 1, 0), 3.8),
 		shot(Scene.WORDMARK, 0.245, Vector3(27.6, 0.5, -0.3), Vector3(-18, 0, 0), 6.2),
 		after(3.505, Vector3(27.6, 0.45, -0.3), Vector3(-18, 0, 0), 5.8),
 		# Settle on the wordmark with the subtitle and taglines, and drift in until the loop ends.
-		shot(Scene.CLOSING, 0.995, Vector3(27.6, 0.25, 0.25), Vector3(-16, 0, 0), 5.6, InOut.SINE),
+		shot(Scene.CLOSING, 0.995, Vector3(27.6, 0.25, 0.25), Vector3(-16, 0, 0), 5.6),
 		after(3.15, Vector3(27.6, 0.25, 0.2), Vector3(-16, 0, 0), 5.4),
 	]
 
@@ -274,9 +277,9 @@ func timed(list: Array[Dictionary]) -> Array[Array]:
 		times.append([entry.scene, at])
 	return times
 
-## Adds a shot's easing, if it has one, to its frame.
-func eased(frame: Dictionary, entry: Dictionary) -> Dictionary:
-	if entry.easing != null: frame["interpolation"] = entry.easing
+## Adds how the camera moves into a shot to its frame; the loop's first shot has no move into it.
+func moved(frame: Dictionary, entry: Dictionary, at: float) -> Dictionary:
+	if at > 0: frame["interpolation"] = entry.easing if entry.easing != null else GLIDE
 	return frame
 
 func rig() -> TweensGdKeyframes:
@@ -287,14 +290,14 @@ func rig() -> TweensGdKeyframes:
 		var node: Node3D = targets.stations[station(times[i][0])]
 		var target: Vector3 = node.transform * list[i].target
 		var turn: Vector3 = list[i].turn + Vector3(0, node.rotation_degrees.y, 0)
-		frames[t(times[i][1])] = eased({"position": target, "rotation_degrees": turn}, list[i])
+		frames[t(times[i][1])] = moved({"position": target, "rotation_degrees": turn}, list[i], times[i][1])
 	return timeline(frames)
 
 func lens() -> TweensGdKeyframes:
 	var list := shots()
 	var times := timed(list)
 	var frames := {}
-	for i in list.size(): frames[t(times[i][1])] = eased({"z": list[i].distance}, list[i])
+	for i in list.size(): frames[t(times[i][1])] = moved({"z": list[i].distance}, list[i], times[i][1])
 	return timeline(frames)
 
 ## Paper fades in, and fades back over the jump to the loop's first keys.
@@ -421,8 +424,8 @@ func route() -> TweensGdKeyframes:
 	for i in waypoints.size(): visit(frames, waypoint(i), waypoints[i])
 	var period: Vector3 = targets.period
 	var front := on(5, Vector3(period.x, 0, 0.25))
-	visit(frames, (waypoint(8) + cue(Scene.WORDMARK)) / 2, bend(4, waypoints[-1], front))
-	visit(frames, cue(Scene.WORDMARK), front)
+	visit(frames, (waypoint(8) + parked()) / 2, bend(4, waypoints[-1], front))
+	visit(frames, parked(), front)
 	visit(frames, dotted() - EIGHTH, front)
 	visit(frames, dotted(), on(5, period), Out.BACK)
 	return timeline(frames)
@@ -455,7 +458,7 @@ func disc() -> TweensGdKeyframes:
 	roll(frames, walk(), walk() + BAR)
 	roll(frames, walk() + BAR + BEAT, tick(0) - EIGHTH)
 	roll(frames, tick(0), tick(8))
-	stop(frames, cue(Scene.WORDMARK), 1.5)
+	stop(frames, parked(), 1.5)
 	# It stays stretched into the first hop and rounds out in the air.
 	key(frames, run_up(), {"scale": Vector3.ONE})
 	key(frames, takeoff() - 0.225, {"scale": STRETCHED})

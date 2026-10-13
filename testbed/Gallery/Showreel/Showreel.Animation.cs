@@ -25,15 +25,15 @@ public sealed partial class Showreel
         [Scene.Keyframes] = Bars(12) + 3 * Eighth, [Scene.Wordmark] = Bars(15), [Scene.Closing] = Bars(16) + 2 * Beat,
     };
 
-    // Each station word gets a close-up as it stands, each definition a wider frame, and each punch line a close one.
-    // Moves take a second or more and start early, so the camera arrives as things happen. A shot with a scene is
-    // timed from that scene's cue; After follows the shot before it, with the seconds the camera takes to move into it.
+    // Each station word gets a close-up as it stands, each definition a wider frame, and each punch line a close one
+    // that drifts after the leaving dot. Moves take a second or more and start early, so the camera arrives as things
+    // happen. A shot with a scene is timed from its cue; After follows the shot before it by the seconds of the move.
     private static readonly Shot[] Shots = [
         // Up at the dot in the sky, then down to the page with it.
         new(Scene.Opening, 0, (-2.06, 2.1, 0), (25, -4, 0), 4.4),
         After(2.6, (-2.06, 2.15, 0), (23, 2, 0), 4.4),
         After(1.4, (-2.06, 2.1, 0), (22, 0, 0), 4.4),
-        After(1.2, (-1.9, 0.4, 0.1), (-22, -10, 0), 4.2, InOut.Cubic),
+        After(1.2, (-1.9, 0.4, 0.1), (-22, -10, 0), 4.2),
         // FROM, the definition, and the punch line, held until its words have nearly blown away.
         new(Scene.FromTo, -0.805, (-2, 0.32, -0.45), (-14, -6, 0), 3),
         After(0.8, (-2.06, 0.34, -0.6), (-15, -4, 0), 2.4),
@@ -41,9 +41,9 @@ public sealed partial class Showreel
         After(1.8, (-0.3, 0.1, 0.5), (-30, -4, 0), 5),
         After(1.1, (-0.1, 0.1, 0.5), (-30, -2, 0), 5),
         After(1.25, (-0.6, 0, 0.3), (-34, 0, 0), 3.9),
-        After(4.15, (-0.45, 0.1, 0.3), (-34, 1, 0), 3.8, InOut.Sine),
+        After(4.15, (0.4, 0.1, 0.3), (-34, 1, 0), 4.6),
         // A slow pan over to EASE and its definition as its last letter stands, and the punch line.
-        new(Scene.Ease, 3.17, (5.6, 0, 0.4), (-30, 2, 0), 5, InOut.Sine),
+        new(Scene.Ease, 3.17, (5.6, 0, 0.4), (-30, 2, 0), 5),
         After(0.9, (5.7, 0, 0.4), (-30, 2, 0), 5),
         After(0.75, (5.1, 0, 0.1), (-34, 0, 0), 4.2),
         After(2.35, (5.2, 0, 0.1), (-34, 1, 0), 4.05),
@@ -52,28 +52,28 @@ public sealed partial class Showreel
         After(1.85, (10.7, 0, 0.6), (-30, 0, 0), 4.8),
         After(1.2, (10.5, 0.48, 0), (4, -3, 0), 3.5),
         new(Scene.Bounce, Hop, (10.5, 0.48, 0), (4, -2.5, 0), 3.5),
-        After(0.4, (10.5, 0.48, 0), (4, -2, 0), 3.15, Out.Back),
+        After(0.4, (10.5, 0.48, 0), (4, -2, 0), 3.15),
         After(2.395, (10.9, 0.48, 0), (4, 1, 0), 3.3),
         After(1.1, (10.5, 0, 0.4), (-34, 0, 0), 3.9),
-        After(2.15, (10.65, 0, 0.4), (-34, 1, 0), 3.8),
+        After(2.15, (11.6, 0, 0.4), (-34, 1, 0), 3.8),
         // ELASTIC, the definition, and the punch line.
         new(Scene.Elastic, 1.645, (15.3, 0.3, -0.4), (-12, 0, 0), 3.2),
         After(0.4, (15.4, 0.3, -0.4), (-12, 0, 0), 3.2),
         After(0.8, (16.1, 0, 0.5), (-28, 0, 0), 5),
         After(0.6, (16.2, 0, 0.5), (-28, 0, 0), 5),
         After(0.9, (15.6, 0, 0.2), (-34, 0, 0), 3.9),
-        After(2.3, (15.75, 0, 0.2), (-34, 1, 0), 3.8),
+        After(2.3, (16.5, 0, 0.2), (-34, 1, 0), 3.8),
         // Along KEYFRAMES as its letters stand, the definition, the punch line, and on to the wordmark.
         new(Scene.Keyframes, 0.67, (20, 0.25, -0.2), (-24, -8, 0), 3),
         After(1.55, (21, 0.25, -0.2), (-24, -2, 0), 3),
         After(0.7, (21.6, 0, 0.6), (-30, 0, 0), 4.8),
         After(0.75, (21.7, 0, 0.6), (-30, 1, 0), 4.8),
         After(0.85, (21.25, 0, 0.3), (-34, 0, 0), 3.9),
-        After(2.1, (21.4, 0, 0.3), (-34, 1, 0), 3.8),
+        After(2.1, (22.2, 0, 0.3), (-34, 1, 0), 3.8),
         new(Scene.Wordmark, 0.245, (27.6, 0.5, -0.3), (-18, 0, 0), 6.2),
         After(3.505, (27.6, 0.45, -0.3), (-18, 0, 0), 5.8),
         // Settle on the wordmark with the subtitle and taglines, and drift in until the loop ends.
-        new(Scene.Closing, 0.995, (27.6, 0.25, 0.25), (-16, 0, 0), 5.6, InOut.Sine),
+        new(Scene.Closing, 0.995, (27.6, 0.25, 0.25), (-16, 0, 0), 5.6),
         After(3.15, (27.6, 0.25, 0.2), (-16, 0, 0), 5.4),
     ];
 
@@ -100,7 +100,7 @@ public sealed partial class Showreel
         trail.Lifetime = Length * Tempo;
         var route = Route();
         return [
-            fade.Tween(Fade()), rig.Tween(Rig()), camera.Tween(Lens()),
+            fade.Tween(Fade()), rig.Tween(Rig()), lens.Tween(Lens()),
             // One definition moves both the dot and the emitter that lays its trail.
             dot.Tween(route), trail.Tween(route), trail.Tween(Lay()),
             disc.Tween(Disc()), rim.Tween(Rim()), leaves.Tween(Toss()), impact.Tween(Impact()),
@@ -204,9 +204,10 @@ public sealed partial class Showreel
     private double Takeoff => Landing(0) - Beat;
     private double Stretch(int i) => Cue(Scene.Elastic) + 3 * Beat + Eighth * i;
     private double Waypoint(int i) => Cue(Scene.Keyframes) + Beat * i;
-    // When the dot walks from FROM to TO, runs up to BOUNCE, and becomes the wordmark's period.
+    // When the dot walks from FROM to TO, runs up to BOUNCE, stops in front of the wordmark, and becomes its period.
     private double Walk => Cue(Scene.FromTo) + 2 * Beat;
     private double RunUp => Cue(Scene.Bounce) - 3 * Beat;
+    private double Parked => Cue(Scene.Wordmark) + 2 * Beat;
     private double Dotted => Cue(Scene.Wordmark) + Bar;
 
     /// <summary>When a definition is printed, shrinks to its headword, gains new words, and blows away.</summary>
@@ -220,7 +221,8 @@ public sealed partial class Showreel
 
     /// <summary>Where the camera looks: the rig sits on the target and turns, and the camera backs away from it by the
     /// distance. Target and turn are relative to the scene's station, so each scene is framed as if unturned. At counts
-    /// seconds from the scene's cue, or without a scene, from the shot before.</summary>
+    /// seconds from the scene's cue, or without a scene, from the shot before. The camera glides into a shot unless it
+    /// names another ease.</summary>
     private readonly record struct Shot(Scene? Scene, double At, (double X, double Y, double Z) Target,
         (double X, double Y, double Z) Turn, double Distance, Interpolation? Ease = null);
 
@@ -252,6 +254,12 @@ public sealed partial class Showreel
         return timed;
     }
 
+    // Each move starts and ends at rest without a jolt: velocity and acceleration are zero at every shot.
+    private static readonly Interpolation Glide = InOut.SmootherStep;
+
+    /// <summary>How the camera moves into a shot; the loop's first shot has no move into it.</summary>
+    private static Interpolation? Move(Shot shot, double at) => at > 0 ? shot.Ease ?? Glide : null;
+
     private static Vector3 Vector((double X, double Y, double Z) v) => new((float)v.X, (float)v.Y, (float)v.Z);
 
     private Tweens.Keyframes Rig() => Timeline([
@@ -260,12 +268,12 @@ public sealed partial class Showreel
             var shot = Shots[i];
             var station = stations[Station(timed.Scene)];
             var turn = Vector(shot.Turn) + new Vector3(0, station.RotationDegrees.Y, 0);
-            return Key.At(T(timed.At), position: station.Transform * Vector(shot.Target), rotationDegrees: turn, interpolation: shot.Ease);
+            return Key.At(T(timed.At), position: station.Transform * Vector(shot.Target), rotationDegrees: turn, interpolation: Move(shot, timed.At));
         }),
     ]);
 
     private Tweens.Keyframes Lens() =>
-        Timeline([.. Timed().Select((timed, i) => Key.At(T(timed.At), z: Shots[i].Distance, interpolation: Shots[i].Ease))]);
+        Timeline([.. Timed().Select((timed, i) => Key.At(T(timed.At), z: Shots[i].Distance, interpolation: Move(Shots[i], timed.At)))]);
 
     /// <summary>Paper fades in, and fades back over the jump to the loop's first keys.</summary>
     private Tweens.Keyframes Fade() => Timeline([
@@ -385,8 +393,8 @@ public sealed partial class Showreel
         Visit((Stretch(6) + Waypoint(0)) / 2, Bend(3, past, waypoints[0]));
         for (var i = 0; i < diamonds.Length; i++) Visit(Waypoint(i), waypoints[i]);
         var front = On(5, new Vector3(period.X, 0, 0.25f));
-        Visit((Waypoint(8) + Cue(Scene.Wordmark)) / 2, Bend(4, waypoints[^1], front));
-        Visit(Cue(Scene.Wordmark), front);
+        Visit((Waypoint(8) + Parked) / 2, Bend(4, waypoints[^1], front));
+        Visit(Parked, front);
         Visit(Dotted - Eighth, front);
         Visit(Dotted, On(5, period), Out.Back);
         return Timeline(keys);
@@ -420,7 +428,7 @@ public sealed partial class Showreel
         // Rolling over the page, it stretches as it speeds up and squeezes as it slows down.
         keys.AddRange([
             .. Roll(Walk, Walk + Bar), .. Roll(Walk + Bar + Beat, Tick(0) - Eighth), .. Roll(Tick(0), Tick(8)),
-            .. Stop(Cue(Scene.Wordmark), 1.5),
+            .. Stop(Parked, 1.5),
         ]);
         // It stays stretched into the first hop and rounds out in the air.
         keys.AddRange([

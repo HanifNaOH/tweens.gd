@@ -22,6 +22,8 @@ public sealed partial class Showreel : GalleryEffect
     // Each scene lies on its own patch of the page, turned and moved a little, so the path meanders between them.
     private Node3D[] stations = [];
     private Camera3D camera = null!;
+    // The point the animation dollies on the rig; the camera follows it on a spring.
+    private Node3D lens = null!;
     private Node3D dot = null!;
     private Sprite3D disc = null!, godot = null!;
     private Sprite3D rim = null!;
@@ -53,6 +55,9 @@ public sealed partial class Showreel : GalleryEffect
 
         rig = Get<Node3D>("Rig");
         camera = Get<Camera3D>("Camera");
+        lens = rig.Add(new Node3D { Name = "Lens", Transform = camera.Transform });
+        camera.TopLevel = true;
+        scene.AddChild(new CameraSpring { Camera = camera, Lens = lens, Target = rig });
         var view = scene.GetParent<SubViewport>();
         Frame(view);
         view.SizeChanged += () => Frame(view);
@@ -111,7 +116,7 @@ public sealed partial class Showreel : GalleryEffect
     {
         ["rig"] = rig,
         ["stations"] = new Godot.Collections.Array<Node3D>(stations),
-        ["camera"] = camera,
+        ["lens"] = lens,
         ["dot"] = dot,
         ["disc"] = disc,
         ["rim"] = rim,
