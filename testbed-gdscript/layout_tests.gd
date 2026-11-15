@@ -34,6 +34,9 @@ func run(host: Node) -> bool:
 	await _detached_slots_get_their_visual_back()
 	await _global_z_order_holds_across_branches()
 	_invalid_enter_and_exit_scales_are_rejected()
+	await _empty_layout_animates_its_first_item_in()
+	_explicit_items_reject_enter_and_exit()
+	await _exiting_visual_follows_a_resized_root()
 	await _wait_frames(2)
 	return true
 
@@ -567,3 +570,66 @@ func _invalid_enter_and_exit_scales_are_rejected() -> void:
 	var transition := layout5.update(func(_container: Control) -> void: pass)
 	check(transition.completion_reason == T.Reason.FAILED and not transition.error.is_empty(), "negative enter_scale is rejected")
 	scene.root.queue_free()
+
+func _empty_layout_animates_its_first_item_in() -> void:
+	var root := HBoxContainer.new()
+	root.size = Vector2(320, 240)
+	root.custom_minimum_size = root.size
+	_host.add_child(root)
+	await _wait_frames(2)
+	var added := _make_slot("First")
+	var options := TweensGdLayoutOptions.new()
+	options.duration = 0.05
+	options.animate_enter = true
+	var layout := T.create_layout(root, options)
+	var transition := layout.update(func(container: Control) -> void:
+		container.add_child(added)
+	)
+	var visual := added.get_node("Visual") as Control
+	check(visual.modulate.a == 0.0, "first item starts invisible in an empty layout")
+	var reason: int = await transition.end
+	check(reason == T.Reason.COMPLETED and visual.modulate.a == 1.0, "first item animates into an empty layout")
+	var empty := HBoxContainer.new()
+	_host.add_child(empty)
+	var rejected := T.create_layout(empty).update(func(_container: Control) -> void: pass)
+	check(rejected.completion_reason == T.Reason.FAILED, "an empty layout without animate_enter is still rejected")
+	empty.queue_free()
+	root.queue_free()
+
+func _explicit_items_reject_enter_and_exit() -> void:
+	var scene := _make_container(false, 1)
+	var items: Array[TweensGdLayoutItem] = [TweensGdLayoutItem.new(scene.slots[0], scene.visuals[0])]
+	var flags: Array[StringName] = [&"animate_enter", &"animate_exit"]
+	for flag in flags:
+		var options := TweensGdLayoutOptions.new()
+		options.set(flag, true)
+		var layout := T.create_layout_from_items(scene.root, items, options)
+		var state := MutationState.new()
+		var transition := layout.update(func(_container: Control) -> void: state.called = true)
+		check(not state.called, "%s with explicit items does not run the mutation" % flag)
+		check(transition.completion_reason == T.Reason.FAILED and not transition.error.is_empty(),
+			"%s with explicit items is rejected" % flag)
+	scene.root.queue_free()
+
+func _exiting_visual_follows_a_resized_root() -> void:
+	var scene := _make_container(false, 3)
+	var root := scene.root
+	var slots: Array[Control] = scene.slots
+	var visuals: Array[Control] = scene.visuals
+	await _wait_frames(2)
+	var gone := visuals[1]
+	var before := gone.size
+	var options := TweensGdLayoutOptions.new()
+	options.duration = 0.05
+	options.delay = 0.3
+	options.animate_exit = true
+	var layout := T.create_layout(root, options)
+	var transition := layout.update(func(_container: Control) -> void:
+		slots[1].queue_free()
+	)
+	root.size = Vector2(root.size.x * 2.0, root.size.y)
+	await _wait_frames(3)
+	check(gone.top_level and is_equal_approx(gone.size.x, before.x * 2.0), "exiting visual follows a resized root")
+	transition.cancel()
+	await transition.end
+	root.queue_free()

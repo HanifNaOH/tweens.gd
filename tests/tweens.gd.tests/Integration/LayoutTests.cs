@@ -644,4 +644,84 @@ public class LayoutTests(HeadlessFixture godot)
         var transition = Tweens.CreateLayout(root, new LayoutOptions { EnterScale = -1 }).Update(_ => { });
         Assert.Throws<ArgumentOutOfRangeException>(() => transition.End.GetAwaiter().GetResult());
     }
+
+    [Fact]
+    public async Task EmptyLayoutAnimatesItsFirstItemIn()
+    {
+        using var scope = new SceneScope(godot);
+        var root = new HBoxContainer { Size = new Vector2(320, 240), CustomMinimumSize = new Vector2(320, 240) };
+        scope.Add(root);
+        scope.Frames(2);
+        var added = MakeSlot("First");
+        var layout = Tweens.CreateLayout(root, new LayoutOptions { Duration = 0.05, AnimateEnter = true });
+        var transition = layout.Update(container => container.AddChild(added));
+        var visual = added.GetNode<Control>("Visual");
+
+        Assert.Equal(0, visual.Modulate.A);
+        scope.FramesUntil(() => transition.End.IsCompleted, 200);
+        Assert.Equal(Reason.Completed, await transition.End);
+        Assert.Equal(1, visual.Modulate.A);
+
+        var plain = Tweens.CreateLayout(root, new LayoutOptions { Duration = 0.05 });
+        var none = new HBoxContainer { Size = new Vector2(10, 10) };
+        scope.Add(none);
+        var rejected = Tweens.CreateLayout(none).Update(_ => { });
+        Assert.Throws<ArgumentException>(() => rejected.End.GetAwaiter().GetResult());
+    }
+
+    [Fact]
+    public void ExplicitItemsRejectEnterAndExitBeforeMutation()
+    {
+        using var scope = new SceneScope(godot);
+        var (root, slots, visuals) = MakeRow(scope, 1);
+        scope.Frames(2);
+        var items = new[] { new LayoutItem(slots[0], visuals[0]) };
+        foreach (var options in new[] { new LayoutOptions { AnimateEnter = true }, new LayoutOptions { AnimateExit = true } })
+        {
+            var called = false;
+            var transition = Tweens.CreateLayoutFromItems(root, items, options).Update(_ => called = true);
+            Assert.False(called);
+            Assert.Throws<ArgumentException>(() => transition.End.GetAwaiter().GetResult());
+        }
+    }
+
+    [Fact]
+    public async Task ExitingVisualFollowsTheRootWhenItIsResizedMidTransition()
+    {
+        using var scope = new SceneScope(godot);
+        var (root, slots, visuals) = MakeRow(scope, 3);
+        scope.Frames(2);
+        var gone = visuals[1];
+        var before = gone.Size;
+        var layout = Tweens.CreateLayout(root, new LayoutOptions { Duration = 0.05, Delay = 0.3, AnimateExit = true });
+        var transition = layout.Update(_ => slots[1].QueueFree());
+        root.Size = new Vector2(root.Size.X * 2, root.Size.Y);
+        scope.Frames(3);
+
+        Assert.True(gone.TopLevel);
+        Assert.Equal(before.X * 2, gone.Size.X, 0.5);
+        transition.Cancel();
+        await transition.End;
+    }
+
+    [Fact]
+    public async Task RootGrowingWithItsContentDoesNotScaleTheFirstRects()
+    {
+        using var scope = new SceneScope(godot);
+        var root = new VBoxContainer();
+        var slots = new[] { MakeSlot("A"), MakeSlot("B") };
+        foreach (var slot in slots) root.AddChild(slot);
+        scope.Add(root);
+        scope.Frames(2);
+        var visual = slots[1].GetNode<Control>("Visual");
+        var before = visual.GlobalPosition;
+        var layout = Tweens.CreateLayout(root, new LayoutOptions { Duration = 0.05, Delay = 1 });
+        var transition = layout.Update(container => container.AddChild(MakeSlot("C")));
+        scope.Frames(6);
+
+        Assert.True(root.Size.Y > 80);
+        Assert.True(visual.GlobalPosition.IsEqualApprox(before), $"{visual.GlobalPosition} != {before}");
+        transition.Cancel();
+        await transition.End;
+    }
 }

@@ -11,6 +11,8 @@ class Snapshot extends RefCounted:
 	var first_global_position := Vector2.ZERO
 	var first_local_position := Vector2.ZERO
 	var first_size := Vector2.ZERO
+	var root_rect := Rect2()
+	var root_minimum := Vector2.ZERO
 	var original_scale := Vector2.ONE
 	var original_z_index := 0
 	var original_z_as_relative := true
@@ -57,8 +59,10 @@ func update(change: Callable, transition_options: TweensGdLayoutOptions = null) 
 	var options_error := run_options.validate()
 	if not options_error.is_empty():
 		return LayoutHandle.rejected(options_error)
+	if _uses_explicit_items and (run_options.animate_enter or run_options.animate_exit):
+		return LayoutHandle.rejected("animate_enter and animate_exit need automatic discovery, not explicit items.")
 	var items := _discover_items()
-	if items.is_empty():
+	if items.is_empty() and not run_options.animate_enter:
 		return LayoutHandle.rejected("A layout update needs at least one item.")
 	var item_error := _validate_items(items)
 	if not item_error.is_empty():
@@ -132,12 +136,28 @@ func _make_snapshot(item: TweensGdLayoutItem) -> Snapshot:
 	snapshot.first_global_position = item.visual_control.global_position
 	snapshot.first_local_position = item.visual_control.position
 	snapshot.first_size = item.visual_control.size
+	snapshot.root_rect = _root.get_global_rect()
+	snapshot.root_minimum = _root.get_combined_minimum_size()
 	snapshot.original_scale = item.visual_control.scale
 	snapshot.original_z_index = item.visual_control.z_index
 	snapshot.original_z_as_relative = item.visual_control.z_as_relative
 	snapshot.original_modulate = item.visual_control.modulate
 	snapshot.original_pivot = item.visual_control.pivot_offset
 	return snapshot
+
+func _root_scale(snapshot: Snapshot) -> Vector2:
+	# Only a resize from outside counts. A root that grew or shrank with its content moved nothing by itself.
+	if not is_instance_valid(_root) or snapshot.root_rect.size.x <= 0.0 or snapshot.root_rect.size.y <= 0.0 			or not _root.get_combined_minimum_size().is_equal_approx(snapshot.root_minimum):
+		return Vector2.ONE
+	return _root.get_global_rect().size / snapshot.root_rect.size
+
+func _first_position_now(snapshot: Snapshot) -> Vector2:
+	if not is_instance_valid(_root):
+		return snapshot.first_global_position
+	return _root.get_global_rect().position + (snapshot.first_global_position - snapshot.root_rect.position) * _root_scale(snapshot)
+
+func _first_size_now(snapshot: Snapshot) -> Vector2:
+	return snapshot.first_size * _root_scale(snapshot)
 
 func _is_live(snapshot: Snapshot) -> bool:
 	var slot := snapshot.item.layout_control
@@ -264,6 +284,10 @@ func _run_after_change(handle: TweensGdLayoutHandle, snapshots: Array[Snapshot],
 		exit_definition.on_update = func(_tween: TweensGdHandle, progress: float) -> void:
 			_apply_exit_progress(snapshot, progress, run_options.exit_scale)
 		handles.append(Tweens.play(_root, exit_definition, null, run_options.playback))
+		var place_definition := Tweens.value(0.0, 1.0, exit_delay + run_options.duration)
+		place_definition.on_update = func(_tween: TweensGdHandle, _progress: float) -> void:
+			_place_exiting(snapshot)
+		handles.append(Tweens.play(_root, place_definition, null, run_options.playback))
 	if handles.is_empty():
 		_settle_snapshots(snapshots)
 		active = false
@@ -377,13 +401,13 @@ func _capture_final_rects(snapshots: Array[Snapshot]) -> void:
 func _apply_position_progress(snapshot: Snapshot, progress: float) -> void:
 	if not snapshot.item.validate(_root).is_empty():
 		return
-	snapshot.item.visual_control.global_position = snapshot.first_global_position.lerp(
+	snapshot.item.visual_control.global_position = _first_position_now(snapshot).lerp(
 		snapshot.item.layout_control.global_position, progress)
 
 func _apply_size_progress(snapshot: Snapshot, progress: float) -> void:
 	if not snapshot.item.validate(_root).is_empty():
 		return
-	snapshot.item.visual_control.size = snapshot.first_size.lerp(snapshot.item.layout_control.size, progress)
+	snapshot.item.visual_control.size = _first_size_now(snapshot).lerp(snapshot.item.layout_control.size, progress)
 
 func _apply_current_rects(snapshots: Array[Snapshot]) -> void:
 	for snapshot in snapshots:
@@ -394,11 +418,13 @@ func _apply_current_rects(snapshots: Array[Snapshot]) -> void:
 
 func _hold_first_state(snapshots: Array[Snapshot]) -> void:
 	for snapshot in snapshots:
+		if snapshot.kind == Snapshot.Kind.EXITING:
+			_place_exiting(snapshot)
 		if snapshot.kind != Snapshot.Kind.MATCHED or not snapshot.item.validate(_root).is_empty():
 			continue
 		var visual := snapshot.item.visual_control
-		visual.global_position = snapshot.first_global_position
-		visual.size = snapshot.first_size
+		visual.global_position = _first_position_now(snapshot)
+		visual.size = _first_size_now(snapshot)
 		visual.scale = snapshot.original_scale
 
 func _hold_first_state_if_active(handle: TweensGdLayoutHandle, snapshots: Array[Snapshot]) -> void:
@@ -434,10 +460,18 @@ func _apply_enter_progress(snapshot: Snapshot, progress: float, from_scale: floa
 	shown.a *= progress
 	visual.modulate = shown
 
+func _place_exiting(snapshot: Snapshot) -> void:
+	var visual := snapshot.item.visual_control
+	if snapshot.settled or not is_instance_valid(visual):
+		return
+	visual.global_position = _first_position_now(snapshot)
+	visual.size = _first_size_now(snapshot)
+
 func _apply_exit_progress(snapshot: Snapshot, progress: float, to_scale: float) -> void:
 	var visual := snapshot.item.visual_control
 	if snapshot.settled or not is_instance_valid(visual):
 		return
+	_place_exiting(snapshot)
 	visual.pivot_offset = visual.size / 2.0
 	visual.scale = snapshot.original_scale * lerpf(1.0, to_scale, progress)
 	var shown := snapshot.original_modulate

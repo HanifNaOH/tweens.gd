@@ -60,7 +60,8 @@ public sealed class LayoutController
         {
             runOptions.Validate(explicitItems is null);
             items = DiscoverItems();
-            if (items.Length == 0) throw new ArgumentException("A layout update needs at least one item.");
+            if (items.Length == 0 && !(explicitItems is null && runOptions.AnimateEnter))
+                throw new ArgumentException("A layout update needs at least one item.");
             ValidateItems(items);
             snapshots = Capture(root, items);
         }
@@ -256,6 +257,8 @@ public sealed class LayoutController
                         tween.Ease = options.Ease;
                         tween.OnUpdate = (_, progress) => ApplyExitProgress(snapshot, progress, options.ExitScale);
                     }, options.Playback));
+                handles.Add(root.TweenFloat(1, options.Delay.Seconds + index * options.StaggerEach + options.Duration,
+                    tween => tween.OnUpdate = (_, _) => PlaceExiting(snapshot), options.Playback));
             }
 
             if (handles.Count == 0)
@@ -412,9 +415,10 @@ public sealed class LayoutController
     {
         foreach (var snapshot in snapshots)
         {
+            if (snapshot.Kind == SnapshotKind.Exiting) PlaceExiting(snapshot);
             if (!snapshot.ItemIsLive || snapshot.Kind != SnapshotKind.Matched) continue;
-            snapshot.Item.VisualControl.GlobalPosition = snapshot.FirstPosition;
-            snapshot.Item.VisualControl.Size = snapshot.FirstSize;
+            snapshot.Item.VisualControl.GlobalPosition = snapshot.CurrentFirstPosition;
+            snapshot.Item.VisualControl.Size = snapshot.CurrentFirstSize;
             snapshot.Item.VisualControl.Scale = snapshot.OriginalScale;
         }
     }
@@ -449,10 +453,20 @@ public sealed class LayoutController
         visual.Modulate = snapshot.OriginalModulate with { A = snapshot.OriginalModulate.A * progress };
     }
 
+    // The rect an exiting visual held when the update began, carried along if the root is resized or scrolled.
+    private static void PlaceExiting(Snapshot snapshot)
+    {
+        var visual = snapshot.Item.VisualControl;
+        if (snapshot.Settled || !GodotObject.IsInstanceValid(visual)) return;
+        visual.GlobalPosition = snapshot.CurrentFirstPosition;
+        visual.Size = snapshot.CurrentFirstSize;
+    }
+
     private static void ApplyExitProgress(Snapshot snapshot, float progress, double to)
     {
         var visual = snapshot.Item.VisualControl;
         if (snapshot.Settled || !GodotObject.IsInstanceValid(visual)) return;
+        PlaceExiting(snapshot);
         visual.PivotOffset = visual.Size / 2;
         visual.Scale = snapshot.OriginalScale * Mathf.Lerp(1f, (float)to, progress);
         visual.Modulate = snapshot.OriginalModulate with { A = snapshot.OriginalModulate.A * (1 - progress) };
@@ -521,14 +535,14 @@ public sealed class LayoutController
     private static void ApplyPositionProgress(Snapshot snapshot, float progress)
     {
         if (snapshot.ItemIsLive)
-            snapshot.Item.VisualControl.GlobalPosition = snapshot.FirstPosition.Lerp(
+            snapshot.Item.VisualControl.GlobalPosition = snapshot.CurrentFirstPosition.Lerp(
                 snapshot.Item.LayoutControl.GlobalPosition, progress);
     }
 
     private static void ApplySizeProgress(Snapshot snapshot, float progress)
     {
         if (snapshot.ItemIsLive)
-            snapshot.Item.VisualControl.Size = snapshot.FirstSize.Lerp(snapshot.Item.LayoutControl.Size, progress);
+            snapshot.Item.VisualControl.Size = snapshot.CurrentFirstSize.Lerp(snapshot.Item.LayoutControl.Size, progress);
     }
 
     private static void ApplyCurrentRects(IEnumerable<Snapshot> snapshots)
@@ -556,6 +570,15 @@ public sealed class LayoutController
         public LayoutItem Item { get; } = item;
         public Vector2 FirstPosition { get; } = item.VisualControl.GlobalPosition;
         public Vector2 FirstSize { get; } = item.VisualControl.Size;
+        private Rect2 RootRect { get; } = root.GetGlobalRect();
+        private Vector2 RootMinimum { get; } = root.GetCombinedMinimumSize();
+        public Vector2 CurrentFirstPosition => RootScale is { } scale
+            ? Root.GetGlobalRect().Position + (FirstPosition - RootRect.Position) * scale : FirstPosition;
+        public Vector2 CurrentFirstSize => RootScale is { } scale ? FirstSize * scale : FirstSize;
+        // Only a resize from outside counts. A root that grew or shrank with its content moved nothing by itself.
+        private Vector2? RootScale => GodotObject.IsInstanceValid(Root) && RootRect.Size.X > 0 && RootRect.Size.Y > 0
+            && Root.GetCombinedMinimumSize().IsEqualApprox(RootMinimum)
+            ? Root.GetGlobalRect().Size / RootRect.Size : null;
         public Vector2 OriginalScale { get; } = item.VisualControl.Scale;
         public int OriginalZIndex { get; } = item.VisualControl.ZIndex;
         public bool OriginalZAsRelative { get; } = item.VisualControl.ZAsRelative;

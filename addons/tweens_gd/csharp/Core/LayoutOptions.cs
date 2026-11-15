@@ -34,6 +34,8 @@ public sealed record LayoutOptions
             throw new ArgumentOutOfRangeException(nameof(EnterScale), "Layout enter scale must be finite and non-negative.");
         if (!double.IsFinite(ExitScale) || ExitScale < 0)
             throw new ArgumentOutOfRangeException(nameof(ExitScale), "Layout exit scale must be finite and non-negative.");
+        if (!validateDiscovery && (AnimateEnter || AnimateExit))
+            throw new ArgumentException("AnimateEnter and AnimateExit need automatic discovery, not explicit items.");
         ValidateEase(Ease, nameof(Ease));
         if (SizeEase is { } sizeEase) ValidateEase(sizeEase, nameof(SizeEase));
         Playback.Validate();
