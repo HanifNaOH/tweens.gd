@@ -15,6 +15,13 @@ class Snapshot extends RefCounted:
 	var original_z_index := 0
 	var original_z_as_relative := true
 	var z_order_changed := false
+	enum Kind { MATCHED, ENTERING, EXITING }
+	var kind := Kind.MATCHED
+	var original_modulate := Color.WHITE
+	var original_pivot := Vector2.ZERO
+	var restore_index := 0
+	var free_on_settle := false
+	var settled := false
 	var final_global_position := Vector2.ZERO
 	var final_size := Vector2.ZERO
 	var has_final := false
@@ -46,6 +53,7 @@ func update(change: Callable, transition_options: TweensGdLayoutOptions = null) 
 	var run_options := selected_options.copy()
 	if not _uses_explicit_items:
 		run_options.visual_path = options.visual_path
+		run_options.discover_nested = options.discover_nested
 	var options_error := run_options.validate()
 	if not options_error.is_empty():
 		return LayoutHandle.rejected(options_error)
@@ -65,6 +73,8 @@ func update(change: Callable, transition_options: TweensGdLayoutOptions = null) 
 		_settle_snapshots(snapshots)
 		handle._finish(Tweens.Reason.OWNER_EXITED)
 		return handle
+	if not _uses_explicit_items and (run_options.animate_enter or run_options.animate_exit):
+		snapshots.append_array(_prepare_enter_exit(snapshots, run_options))
 	_hold_first_state(snapshots)
 	call_deferred("_hold_first_state_if_active", handle, snapshots)
 	@warning_ignore("missing_await")
@@ -77,14 +87,21 @@ func _discover_items() -> Array[TweensGdLayoutItem]:
 	var items: Array[TweensGdLayoutItem] = []
 	if not is_instance_valid(_root):
 		return items
-	for child in _root.get_children():
-		if not child is Control:
-			continue
-		var slot := child as Control
-		var visual := slot.get_node_or_null(options.visual_path) as Control
-		if visual != null:
-			items.append(LayoutItem.new(slot, visual))
+	_discover_into(_root, items, null)
 	return items
+
+func _discover_into(parent: Node, items: Array[TweensGdLayoutItem], skip: Node) -> void:
+	for child in parent.get_children():
+		if child == skip:
+			continue
+		var visual: Control = null
+		if child is Control:
+			var slot := child as Control
+			visual = slot.get_node_or_null(options.visual_path) as Control
+			if visual != null:
+				items.append(LayoutItem.new(slot, visual))
+		if options.discover_nested:
+			_discover_into(child, items, visual)
 
 func _validate_items(items: Array[TweensGdLayoutItem]) -> String:
 	var slots: Dictionary = {}
@@ -106,16 +123,65 @@ func _validate_items(items: Array[TweensGdLayoutItem]) -> String:
 func _capture(items: Array[TweensGdLayoutItem]) -> Array[Snapshot]:
 	var snapshots: Array[Snapshot] = []
 	for item in items:
-		var snapshot := Snapshot.new()
-		snapshot.item = item
-		snapshot.first_global_position = item.visual_control.global_position
-		snapshot.first_local_position = item.visual_control.position
-		snapshot.first_size = item.visual_control.size
-		snapshot.original_scale = item.visual_control.scale
-		snapshot.original_z_index = item.visual_control.z_index
-		snapshot.original_z_as_relative = item.visual_control.z_as_relative
-		snapshots.append(snapshot)
+		snapshots.append(_make_snapshot(item))
 	return snapshots
+
+func _make_snapshot(item: TweensGdLayoutItem) -> Snapshot:
+	var snapshot := Snapshot.new()
+	snapshot.item = item
+	snapshot.first_global_position = item.visual_control.global_position
+	snapshot.first_local_position = item.visual_control.position
+	snapshot.first_size = item.visual_control.size
+	snapshot.original_scale = item.visual_control.scale
+	snapshot.original_z_index = item.visual_control.z_index
+	snapshot.original_z_as_relative = item.visual_control.z_as_relative
+	snapshot.original_modulate = item.visual_control.modulate
+	snapshot.original_pivot = item.visual_control.pivot_offset
+	return snapshot
+
+func _is_live(snapshot: Snapshot) -> bool:
+	var slot := snapshot.item.layout_control
+	var visual := snapshot.item.visual_control
+	return is_instance_valid(_root) and is_instance_valid(slot) and is_instance_valid(visual) \
+			and slot.is_inside_tree() and visual.is_inside_tree() and not slot.is_queued_for_deletion() \
+			and visual.get_parent() == slot
+
+func _prepare_enter_exit(snapshots: Array[Snapshot], run_options: TweensGdLayoutOptions) -> Array[Snapshot]:
+	var extra: Array[Snapshot] = []
+	if run_options.animate_exit:
+		for snapshot in snapshots:
+			var slot := snapshot.item.layout_control
+			var visual := snapshot.item.visual_control
+			if not is_instance_valid(slot) or not is_instance_valid(visual) or visual.is_queued_for_deletion() \
+					or visual.get_parent() != slot or _is_live(snapshot):
+				continue
+			var freed := slot.is_queued_for_deletion()
+			if not freed and slot.is_inside_tree():
+				continue
+			snapshot.kind = Snapshot.Kind.EXITING
+			snapshot.free_on_settle = freed
+			snapshot.restore_index = visual.get_index()
+			slot.remove_child(visual)
+			_root.add_child(visual)
+			visual.top_level = true
+			visual.global_position = snapshot.first_global_position
+			visual.size = snapshot.first_size
+	if run_options.animate_enter:
+		var known: Dictionary = {}
+		for snapshot in snapshots:
+			known[snapshot.item.layout_control.get_instance_id()] = true
+		for item in _discover_items():
+			if known.has(item.layout_control.get_instance_id()):
+				continue
+			if not item.validate(_root).is_empty():
+				continue
+			var entering := _make_snapshot(item)
+			entering.kind = Snapshot.Kind.ENTERING
+			var hidden := entering.original_modulate
+			hidden.a = 0.0
+			item.visual_control.modulate = hidden
+			extra.append(entering)
+	return extra
 
 func _run_after_change(handle: TweensGdLayoutHandle, snapshots: Array[Snapshot], run_options: TweensGdLayoutOptions,
 		tree: SceneTree) -> void:
@@ -161,11 +227,23 @@ func _run_after_change(handle: TweensGdLayoutHandle, snapshots: Array[Snapshot],
 		return
 	var matched := _matching_snapshots(snapshots)
 	var handles: Array[TweensGdHandle] = []
+	var base_z := 0
+	if run_options.use_global_z_order:
+		for snapshot in matched:
+			base_z = maxi(base_z, _effective_z(snapshot.item.visual_control))
 	for index in matched.size():
 		var snapshot := matched[index]
-		if run_options.use_layout_z_order:
-			_raise_visual(index, snapshot)
+		if run_options.use_global_z_order:
+			_raise_visual(base_z + index, snapshot, true)
+		elif run_options.use_layout_z_order:
+			_raise_visual(index, snapshot, false)
 		var item_delay := run_options.delay + index * run_options.stagger_each
+		if snapshot.kind == Snapshot.Kind.ENTERING:
+			var enter_definition := Tweens.value(0.0, 1.0, run_options.duration, run_options.ease, item_delay)
+			enter_definition.on_update = func(_tween: TweensGdHandle, progress: float) -> void:
+				_apply_enter_progress(snapshot, progress, run_options.enter_scale)
+			handles.append(Tweens.play(_root, enter_definition, null, run_options.playback))
+			continue
 		var position_definition := Tweens.value(0.0, 1.0, run_options.duration, run_options.ease, item_delay)
 		position_definition.on_update = func(_tween: TweensGdHandle, progress: float) -> void:
 			_apply_position_progress(snapshot, progress)
@@ -175,6 +253,17 @@ func _run_after_change(handle: TweensGdLayoutHandle, snapshots: Array[Snapshot],
 			_apply_size_progress(snapshot, progress)
 		handles.append(Tweens.play(_root, position_definition, null, run_options.playback))
 		handles.append(Tweens.play(_root, size_definition, null, run_options.playback))
+	var leaving: Array[Snapshot] = []
+	for snapshot in snapshots:
+		if snapshot.kind == Snapshot.Kind.EXITING:
+			leaving.append(snapshot)
+	for index in leaving.size():
+		var snapshot := leaving[index]
+		var exit_delay := run_options.delay + index * run_options.stagger_each
+		var exit_definition := Tweens.value(0.0, 1.0, run_options.duration, run_options.ease, exit_delay)
+		exit_definition.on_update = func(_tween: TweensGdHandle, progress: float) -> void:
+			_apply_exit_progress(snapshot, progress, run_options.exit_scale)
+		handles.append(Tweens.play(_root, exit_definition, null, run_options.playback))
 	if handles.is_empty():
 		_settle_snapshots(snapshots)
 		active = false
@@ -305,7 +394,7 @@ func _apply_current_rects(snapshots: Array[Snapshot]) -> void:
 
 func _hold_first_state(snapshots: Array[Snapshot]) -> void:
 	for snapshot in snapshots:
-		if not snapshot.item.validate(_root).is_empty():
+		if snapshot.kind != Snapshot.Kind.MATCHED or not snapshot.item.validate(_root).is_empty():
 			continue
 		var visual := snapshot.item.visual_control
 		visual.global_position = snapshot.first_global_position
@@ -317,18 +406,78 @@ func _hold_first_state_if_active(handle: TweensGdLayoutHandle, snapshots: Array[
 		return
 	_hold_first_state(snapshots)
 
-func _raise_visual(order: int, snapshot: Snapshot) -> void:
+func _raise_visual(order: int, snapshot: Snapshot, absolute: bool) -> void:
 	var visual := snapshot.item.visual_control
-	visual.z_as_relative = true
-	visual.z_index = order
+	visual.z_as_relative = not absolute
+	visual.z_index = clampi(order, RenderingServer.CANVAS_ITEM_Z_MIN, RenderingServer.CANVAS_ITEM_Z_MAX)
 	snapshot.z_order_changed = true
+
+func _effective_z(item: CanvasItem) -> int:
+	var z := item.z_index
+	var parent := item.get_parent() as CanvasItem
+	if item.z_as_relative and parent != null:
+		z += _effective_z(parent)
+	return z
+
+func _apply_enter_progress(snapshot: Snapshot, progress: float, from_scale: float) -> void:
+	if not _is_live(snapshot):
+		return
+	var visual := snapshot.item.visual_control
+	if progress >= 1.0:
+		visual.pivot_offset = snapshot.original_pivot
+		visual.scale = snapshot.original_scale
+		visual.modulate = snapshot.original_modulate
+		return
+	visual.pivot_offset = visual.size / 2.0
+	visual.scale = snapshot.original_scale * lerpf(from_scale, 1.0, progress)
+	var shown := snapshot.original_modulate
+	shown.a *= progress
+	visual.modulate = shown
+
+func _apply_exit_progress(snapshot: Snapshot, progress: float, to_scale: float) -> void:
+	var visual := snapshot.item.visual_control
+	if snapshot.settled or not is_instance_valid(visual):
+		return
+	visual.pivot_offset = visual.size / 2.0
+	visual.scale = snapshot.original_scale * lerpf(1.0, to_scale, progress)
+	var shown := snapshot.original_modulate
+	shown.a *= 1.0 - progress
+	visual.modulate = shown
+
+func _settle_exit(snapshot: Snapshot) -> void:
+	if snapshot.settled:
+		return
+	snapshot.settled = true
+	var visual := snapshot.item.visual_control
+	if not is_instance_valid(visual):
+		return
+	var slot := snapshot.item.layout_control
+	if visual.get_parent() != null:
+		visual.get_parent().remove_child(visual)
+	if snapshot.free_on_settle or not is_instance_valid(slot):
+		visual.queue_free()
+		return
+	visual.top_level = false
+	slot.add_child(visual)
+	slot.move_child(visual, mini(snapshot.restore_index, slot.get_child_count() - 1))
+	visual.position = snapshot.first_local_position
+	visual.size = snapshot.first_size
+	visual.scale = snapshot.original_scale
+	visual.pivot_offset = snapshot.original_pivot
+	visual.modulate = snapshot.original_modulate
 
 func _settle_snapshots(snapshots: Array[Snapshot]) -> void:
 	for snapshot in snapshots:
+		if snapshot.kind == Snapshot.Kind.EXITING:
+			_settle_exit(snapshot)
+			continue
 		if not is_instance_valid(snapshot.item.visual_control):
 			continue
 		var visual := snapshot.item.visual_control
 		var slot := snapshot.item.layout_control
+		if snapshot.kind == Snapshot.Kind.ENTERING:
+			visual.modulate = snapshot.original_modulate
+			visual.pivot_offset = snapshot.original_pivot
 		if is_instance_valid(slot) and visual.get_parent() == slot:
 			if slot.is_inside_tree():
 				visual.global_position = slot.global_position

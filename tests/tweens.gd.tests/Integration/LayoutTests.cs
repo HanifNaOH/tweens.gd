@@ -485,4 +485,163 @@ public class LayoutTests(HeadlessFixture godot)
         Assert.False(mutationCalled);
         Assert.Throws<ArgumentOutOfRangeException>(() => transition.End.GetAwaiter().GetResult());
     }
+
+    private static Control MakeSlot(string name)
+    {
+        var slot = new Control { Name = name, CustomMinimumSize = new Vector2(60, 40) };
+        var visual = new ColorRect { Name = "Visual", Color = Colors.Red };
+        visual.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        slot.AddChild(visual);
+        return slot;
+    }
+
+    [Fact]
+    public async Task NestedSlotsAreFoundOnlyWhenRequested()
+    {
+        using var scope = new SceneScope(godot);
+        var column = new VBoxContainer { Size = new Vector2(320, 240), CustomMinimumSize = new Vector2(320, 240) };
+        var group = new HBoxContainer { Name = "Group" };
+        var slots = new[] { MakeSlot("A"), MakeSlot("B") };
+        foreach (var slot in slots) group.AddChild(slot);
+        column.AddChild(group);
+        scope.Add(column);
+        scope.Frames(2);
+
+        var flat = Tweens.CreateLayout(column).Update(_ => { });
+        Assert.Throws<ArgumentException>(() => flat.End.GetAwaiter().GetResult());
+
+        var layout = Tweens.CreateLayout(column, new LayoutOptions { DiscoverNested = true, Duration = 0.05 });
+        var before = slots[1].GetNode<Control>("Visual").GlobalPosition;
+        var transition = layout.Update(_ =>
+        {
+            group.MoveChild(slots[1], 0);
+            group.QueueSort();
+        });
+        Assert.Equal(before, slots[1].GetNode<Control>("Visual").GlobalPosition);
+        scope.FramesUntil(() => transition.End.IsCompleted, 200);
+        Assert.Equal(Reason.Completed, await transition.End);
+        Assert.True(slots[1].GetNode<Control>("Visual").GlobalPosition.IsEqualApprox(slots[1].GlobalPosition));
+        Assert.NotEqual(before, slots[1].GlobalPosition);
+    }
+
+    [Fact]
+    public async Task NewSlotsFadeAndScaleInWhenEnterIsAnimated()
+    {
+        using var scope = new SceneScope(godot);
+        var (root, _, _) = MakeRow(scope, 2);
+        scope.Frames(2);
+        var added = MakeSlot("New");
+        var layout = Tweens.CreateLayout(root, new LayoutOptions { Duration = 0.2, AnimateEnter = true, EnterScale = 0.5 });
+        var transition = layout.Update(container => container.AddChild(added));
+        var visual = added.GetNode<Control>("Visual");
+
+        Assert.Equal(0, visual.Modulate.A);
+        scope.FramesUntil(() => visual.Modulate.A > 0.2f, 200);
+        Assert.InRange(visual.Modulate.A, 0.2f, 0.99f);
+        Assert.True(visual.Scale.X < 1 && visual.Scale.X >= 0.5f);
+        scope.FramesUntil(() => transition.End.IsCompleted, 200);
+        Assert.Equal(Reason.Completed, await transition.End);
+        Assert.Equal(1, visual.Modulate.A);
+        Assert.Equal(Vector2.One, visual.Scale);
+        Assert.Equal(Vector2.Zero, visual.PivotOffset);
+        Assert.True(visual.GlobalPosition.IsEqualApprox(added.GlobalPosition));
+    }
+
+    [Fact]
+    public async Task NewSlotsAppearAtOnceWithoutAnimateEnter()
+    {
+        using var scope = new SceneScope(godot);
+        var (root, _, _) = MakeRow(scope, 2);
+        scope.Frames(2);
+        var added = MakeSlot("New");
+        var transition = Tweens.CreateLayout(root, new LayoutOptions { Duration = 0.05 })
+            .Update(container => container.AddChild(added));
+        Assert.Equal(1, added.GetNode<Control>("Visual").Modulate.A);
+        scope.FramesUntil(() => transition.End.IsCompleted, 200);
+        Assert.Equal(Reason.Completed, await transition.End);
+    }
+
+    [Fact]
+    public async Task FreedSlotsFadeOutAboveTheLayoutAndAreFreedAfterwards()
+    {
+        using var scope = new SceneScope(godot);
+        var (root, slots, visuals) = MakeRow(scope, 3);
+        scope.Frames(2);
+        var gone = visuals[1];
+        var start = gone.GlobalPosition;
+        var layout = Tweens.CreateLayout(root, new LayoutOptions { Duration = 0.2, AnimateExit = true, ExitScale = 0.5 });
+        var transition = layout.Update(container => slots[1].QueueFree());
+
+        Assert.True(GodotObject.IsInstanceValid(gone));
+        Assert.True(gone.TopLevel);
+        Assert.Equal(root, gone.GetParent());
+        Assert.Equal(start, gone.GlobalPosition);
+        scope.FramesUntil(() => gone.Modulate.A < 0.8f, 200);
+        Assert.True(gone.Modulate.A < 0.8f);
+        scope.FramesUntil(() => transition.End.IsCompleted, 200);
+        Assert.Equal(Reason.Completed, await transition.End);
+        scope.Frames(2);
+        Assert.False(GodotObject.IsInstanceValid(gone));
+        Assert.True(visuals[2].GlobalPosition.IsEqualApprox(slots[2].GlobalPosition));
+    }
+
+    [Fact]
+    public async Task DetachedSlotsGetTheirVisualBackAfterTheExit()
+    {
+        using var scope = new SceneScope(godot);
+        var (root, slots, visuals) = MakeRow(scope, 2);
+        scope.Frames(2);
+        var layout = Tweens.CreateLayout(root, new LayoutOptions { Duration = 0.05, AnimateExit = true });
+        var transition = layout.Update(container => container.RemoveChild(slots[0]));
+        Assert.True(visuals[0].TopLevel);
+        scope.FramesUntil(() => transition.End.IsCompleted, 200);
+        Assert.Equal(Reason.Completed, await transition.End);
+        Assert.Equal(slots[0], visuals[0].GetParent());
+        Assert.False(visuals[0].TopLevel);
+        Assert.Equal(1, visuals[0].Modulate.A);
+        Assert.Equal(Vector2.One, visuals[0].Scale);
+        slots[0].Free();
+    }
+
+    [Fact]
+    public async Task GlobalZOrderHoldsAcrossBranchesWithDifferentAncestorZ()
+    {
+        using var scope = new SceneScope(godot);
+        var root = new Control { Size = new Vector2(320, 240) };
+        var left = new HBoxContainer { Name = "Left", ZIndex = 50 };
+        var right = new HBoxContainer { Name = "Right", ZIndex = -30, Position = new Vector2(0, 100) };
+        var a = MakeSlot("A");
+        var b = MakeSlot("B");
+        left.AddChild(a);
+        right.AddChild(b);
+        root.AddChild(left);
+        root.AddChild(right);
+        scope.Add(root);
+        scope.Frames(2);
+        var visualA = a.GetNode<Control>("Visual");
+        var visualB = b.GetNode<Control>("Visual");
+        var items = new[] { new LayoutItem(b, visualB), new LayoutItem(a, visualA) };
+        var layout = Tweens.CreateLayoutFromItems(root, items, new LayoutOptions { Duration = 0.3, UseGlobalZOrder = true });
+        var transition = layout.Update(_ => { });
+        scope.FramesUntil(() => transition.IsAnimating, 80);
+
+        Assert.False(visualA.ZAsRelative);
+        Assert.False(visualB.ZAsRelative);
+        Assert.True(visualB.ZIndex < visualA.ZIndex);
+        Assert.True(visualB.ZIndex >= 50);
+        transition.Cancel();
+        Assert.Equal(Reason.Cancelled, await transition.End);
+        Assert.True(visualA.ZAsRelative && visualB.ZAsRelative);
+        Assert.Equal(0, visualA.ZIndex);
+    }
+
+    [Fact]
+    public void InvalidEnterAndExitScalesAreRejected()
+    {
+        using var scope = new SceneScope(godot);
+        var (root, _, _) = MakeRow(scope, 1);
+        scope.Frames(2);
+        var transition = Tweens.CreateLayout(root, new LayoutOptions { EnterScale = -1 }).Update(_ => { });
+        Assert.Throws<ArgumentOutOfRangeException>(() => transition.End.GetAwaiter().GetResult());
+    }
 }

@@ -27,6 +27,13 @@ func run(host: Node) -> bool:
 	await _invalid_configuration_does_not_mutate()
 	await _unstable_reflow_fails_within_bound()
 	await _root_exit_finishes_owner()
+	await _nested_slots_are_found_only_when_requested()
+	await _new_slots_fade_and_scale_in()
+	await _new_slots_appear_at_once_by_default()
+	await _freed_slots_fade_out_and_are_freed()
+	await _detached_slots_get_their_visual_back()
+	await _global_z_order_holds_across_branches()
+	_invalid_enter_and_exit_scales_are_rejected()
 	await _wait_frames(2)
 	return true
 
@@ -382,3 +389,181 @@ func _unstable_reflow_fails_within_bound() -> void:
 	check(transition.error.contains("did not stabilize"), "unstable reflow explains its failure")
 	check(not layout.active, "unstable reflow releases the controller")
 	root.queue_free()
+
+func _make_slot(slot_name: String) -> Control:
+	var slot := Control.new()
+	slot.name = slot_name
+	slot.custom_minimum_size = Vector2(60, 40)
+	var visual := ColorRect.new()
+	visual.name = "Visual"
+	visual.color = Color.RED
+	visual.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	slot.add_child(visual)
+	return slot
+
+func _nested_slots_are_found_only_when_requested() -> void:
+	var column := VBoxContainer.new()
+	column.size = Vector2(320, 240)
+	column.custom_minimum_size = column.size
+	_host.add_child(column)
+	var group := HBoxContainer.new()
+	group.name = "Group"
+	var slots: Array[Control] = [_make_slot("A"), _make_slot("B")]
+	for slot in slots:
+		group.add_child(slot)
+	column.add_child(group)
+	await _wait_frames(2)
+
+	var flat := T.create_layout(column).update(func(_container: Control) -> void: pass)
+	check(flat.completion_reason == T.Reason.FAILED, "direct-child discovery finds nothing in a wrapped layout")
+
+	var options := TweensGdLayoutOptions.new()
+	options.discover_nested = true
+	options.duration = 0.05
+	var layout := T.create_layout(column, options)
+	var visual_b := slots[1].get_node("Visual") as Control
+	var before := visual_b.global_position
+	var transition := layout.update(func(_container: Control) -> void:
+		group.move_child(slots[1], 0)
+		group.queue_sort()
+	)
+	check(visual_b.global_position.is_equal_approx(before), "nested update holds the visual at its first position")
+	var reason: int = await transition.end
+	check(reason == T.Reason.COMPLETED, "nested layout completes")
+	check(visual_b.global_position.is_equal_approx(slots[1].global_position), "nested visual reaches its slot")
+	check(not slots[1].global_position.is_equal_approx(before), "nested slot moved")
+	column.queue_free()
+
+func _new_slots_fade_and_scale_in() -> void:
+	var scene := _make_container(false, 2)
+	var root := scene.root
+	await _wait_frames(2)
+	var added := _make_slot("New")
+	var options := TweensGdLayoutOptions.new()
+	options.duration = 0.1
+	options.animate_enter = true
+	options.enter_scale = 0.5
+	var layout1 := T.create_layout(root, options)
+	var transition := layout1.update(func(container: Control) -> void:
+		container.add_child(added)
+	)
+	var visual := added.get_node("Visual") as Control
+	check(visual.modulate.a == 0.0, "entering visual starts invisible")
+	var waited := 0
+	while visual.modulate.a <= 0.2 and waited < 200:
+		await _wait_frames(1)
+		waited += 1
+	check(visual.modulate.a > 0.2 and visual.modulate.a < 1.0, "entering visual fades in")
+	check(visual.scale.x < 1.0 and visual.scale.x >= 0.5, "entering visual scales up")
+	var reason: int = await transition.end
+	check(reason == T.Reason.COMPLETED, "enter transition completes")
+	check(visual.modulate.a == 1.0 and visual.scale == Vector2.ONE and visual.pivot_offset == Vector2.ZERO,
+		"entering visual is restored afterwards")
+	root.queue_free()
+
+func _new_slots_appear_at_once_by_default() -> void:
+	var scene := _make_container(false, 2)
+	var root := scene.root
+	await _wait_frames(2)
+	var added := _make_slot("New")
+	var options := TweensGdLayoutOptions.new()
+	options.duration = 0.05
+	var layout2 := T.create_layout(root, options)
+	var transition := layout2.update(func(container: Control) -> void:
+		container.add_child(added)
+	)
+	check((added.get_node("Visual") as Control).modulate.a == 1.0, "new visuals are untouched without animate_enter")
+	var reason: int = await transition.end
+	check(reason == T.Reason.COMPLETED, "plain update with a new slot completes")
+	root.queue_free()
+
+func _freed_slots_fade_out_and_are_freed() -> void:
+	var scene := _make_container(false, 3)
+	var root := scene.root
+	var slots: Array[Control] = scene.slots
+	var visuals: Array[Control] = scene.visuals
+	await _wait_frames(2)
+	var gone := visuals[1]
+	var start := gone.global_position
+	var options := TweensGdLayoutOptions.new()
+	options.duration = 0.1
+	options.animate_exit = true
+	options.exit_scale = 0.5
+	var layout3 := T.create_layout(root, options)
+	var transition := layout3.update(func(_container: Control) -> void:
+		slots[1].queue_free()
+	)
+	check(is_instance_valid(gone) and gone.top_level and gone.get_parent() == root, "exiting visual floats above the layout")
+	check(gone.global_position.is_equal_approx(start), "exiting visual stays where it was")
+	var reason: int = await transition.end
+	check(reason == T.Reason.COMPLETED, "exit transition completes")
+	await _wait_frames(2)
+	check(not is_instance_valid(gone), "exiting visual is freed afterwards")
+	check(visuals[2].global_position.is_equal_approx(slots[2].global_position), "surviving visual reaches its slot")
+	root.queue_free()
+
+func _detached_slots_get_their_visual_back() -> void:
+	var scene := _make_container(false, 2)
+	var root := scene.root
+	var slots: Array[Control] = scene.slots
+	var visuals: Array[Control] = scene.visuals
+	await _wait_frames(2)
+	var options := TweensGdLayoutOptions.new()
+	options.duration = 0.05
+	options.animate_exit = true
+	var layout4 := T.create_layout(root, options)
+	var transition := layout4.update(func(container: Control) -> void:
+		container.remove_child(slots[0])
+	)
+	check(visuals[0].top_level, "detached slot's visual floats during the exit")
+	var reason: int = await transition.end
+	check(reason == T.Reason.COMPLETED, "detached exit completes")
+	check(visuals[0].get_parent() == slots[0] and not visuals[0].top_level, "visual is handed back to the detached slot")
+	check(visuals[0].modulate.a == 1.0 and visuals[0].scale == Vector2.ONE, "handed-back visual is restored")
+	slots[0].free()
+	root.queue_free()
+
+func _global_z_order_holds_across_branches() -> void:
+	var root := Control.new()
+	root.size = Vector2(320, 240)
+	_host.add_child(root)
+	var left := HBoxContainer.new()
+	left.z_index = 50
+	var right := HBoxContainer.new()
+	right.z_index = -30
+	right.position = Vector2(0, 100)
+	var a := _make_slot("A")
+	var b := _make_slot("B")
+	left.add_child(a)
+	right.add_child(b)
+	root.add_child(left)
+	root.add_child(right)
+	await _wait_frames(2)
+	var visual_a := a.get_node("Visual") as Control
+	var visual_b := b.get_node("Visual") as Control
+	var options := TweensGdLayoutOptions.new()
+	options.duration = 0.1
+	options.use_global_z_order = true
+	var items: Array[TweensGdLayoutItem] = [TweensGdLayoutItem.new(b, visual_b), TweensGdLayoutItem.new(a, visual_a)]
+	var layout := T.create_layout_from_items(root, items, options)
+	var transition := layout.update(func(_container: Control) -> void: pass)
+	var waited := 0
+	while not transition.is_animating and waited < 80:
+		await _wait_frames(1)
+		waited += 1
+	check(not visual_a.z_as_relative and not visual_b.z_as_relative, "global order is absolute")
+	check(visual_b.z_index < visual_a.z_index and visual_b.z_index >= 50, "global order holds across branches")
+	transition.cancel()
+	var reason: int = await transition.end
+	check(reason == T.Reason.CANCELLED, "global z order test cancels cleanly")
+	check(visual_a.z_as_relative and visual_b.z_as_relative and visual_a.z_index == 0, "global z order is restored")
+	root.queue_free()
+
+func _invalid_enter_and_exit_scales_are_rejected() -> void:
+	var scene := _make_container(false, 1)
+	var options := TweensGdLayoutOptions.new()
+	options.enter_scale = -1.0
+	var layout5 := T.create_layout(scene.root, options)
+	var transition := layout5.update(func(_container: Control) -> void: pass)
+	check(transition.completion_reason == T.Reason.FAILED and not transition.error.is_empty(), "negative enter_scale is rejected")
+	scene.root.queue_free()

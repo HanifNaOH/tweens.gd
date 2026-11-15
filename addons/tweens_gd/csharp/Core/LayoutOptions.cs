@@ -13,6 +13,12 @@ public sealed record LayoutOptions
     public EaseType? SizeEase { get; init; }
     public double StaggerEach { get; init; }
     public bool UseLayoutZOrder { get; init; }
+    public bool UseGlobalZOrder { get; init; }
+    public bool AnimateEnter { get; init; }
+    public bool AnimateExit { get; init; }
+    public double EnterScale { get; init; } = 0.8;
+    public double ExitScale { get; init; } = 0.8;
+    public bool DiscoverNested { get; init; }
     public PlaybackOptions Playback { get; init; }
     public NodePath VisualPath { get; init; } = new("Visual");
 
@@ -24,6 +30,10 @@ public sealed record LayoutOptions
             throw new ArgumentOutOfRangeException(nameof(Delay), "Layout delay must be finite and non-negative.");
         if (!double.IsFinite(StaggerEach) || StaggerEach < 0)
             throw new ArgumentOutOfRangeException(nameof(StaggerEach), "Layout stagger must be finite and non-negative.");
+        if (!double.IsFinite(EnterScale) || EnterScale < 0)
+            throw new ArgumentOutOfRangeException(nameof(EnterScale), "Layout enter scale must be finite and non-negative.");
+        if (!double.IsFinite(ExitScale) || ExitScale < 0)
+            throw new ArgumentOutOfRangeException(nameof(ExitScale), "Layout exit scale must be finite and non-negative.");
         ValidateEase(Ease, nameof(Ease));
         if (SizeEase is { } sizeEase) ValidateEase(sizeEase, nameof(SizeEase));
         Playback.Validate();

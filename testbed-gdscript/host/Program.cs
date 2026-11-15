@@ -75,11 +75,11 @@ internal static class Program
         using var runTests = new StringName("run_tests");
         tests.Set("trace_runs", args.Contains("--lifecycle"));
         tests.Call(runTests);
-        for (var frame = 0; frame < 120 && !tests.Get("finished").AsBool(); frame++)
+        for (var frame = 0; frame < 240 && !tests.Get("finished").AsBool(); frame++)
             engine.Iteration();
         if (!tests.Get("finished").AsBool())
         {
-            Console.Error.WriteLine("GDScript suite did not finish within 120 frames.");
+            Console.Error.WriteLine("GDScript suite did not finish within 240 frames.");
             return 1;
         }
         using var failures = tests.Get("failures").AsGodotArray();

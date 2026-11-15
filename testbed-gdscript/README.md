@@ -19,7 +19,7 @@ dotnet test tests/tweens.gd.tests/tweens.gd.tests.csproj -c Release
 
 The host build copies the current addon, including its `bin/` libraries, and shared
 fixtures into ignored project directories before 2dog's required MSBuild import. The launcher checks every addon script compiles, runs the tests, and
-exits nonzero for assertions, captured Godot script errors, or a 120-frame timeout.
+exits nonzero for assertions, captured Godot script errors, or a 240-frame timeout.
 Shared timing, easing and group completion/overshoot fixtures also run through the
 C# implementation in the library test suite. Group tests additionally cover shared
 controls, overlapping groups, already-settled/rejected members, cancellation during

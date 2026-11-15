@@ -52,7 +52,7 @@ func move_first_to_end() -> void:
 
 ## Discovery
 
-`Tweens.create_layout(root, options)` discovers only direct-child `Control` slots under `root`. By default, each slot's direct child named `Visual` is animated. Change `visual_path` on the controller's options to use a different direct-child name.
+`Tweens.create_layout(root, options)` discovers direct-child `Control` slots under `root`, or every descendant slot when `discover_nested` is set. By default, each slot's direct child named `Visual` is animated. Change `visual_path` on the controller's options to use a different direct-child name.
 
 For slots elsewhere below the root, provide explicit pairs:
 
@@ -64,7 +64,7 @@ var items: Array[TweensGdLayoutItem] = [
 var layout := Tweens.create_layout_from_items(root, items)
 ```
 
-Explicit pairs also support slots under different parent branches, as long as both remain under the controller root. Automatic discovery does not find these nested slots:
+Explicit pairs also support slots under different parent branches, as long as both remain under the controller root. Automatic discovery finds these nested slots only with `discover_nested`:
 
 ```gdscript
 var items: Array[TweensGdLayoutItem] = [
@@ -81,11 +81,11 @@ var transition := layout.update(func(_root: Control) -> void:
 var reason: int = await transition.end
 ```
 
-Each visual must still be a direct child of its own slot; parent branches and visuals must share the same canvas. `use_layout_z_order` does not guarantee a global draw order across branches with different ancestor Z values.
+Each visual must still be a direct child of its own slot; parent branches and visuals must share the same canvas. `use_layout_z_order` does not guarantee a global draw order across branches with different ancestor Z values; `use_global_z_order` does.
 
 Each visual must be a direct child of its slot; each slot must be inside the root. Slots and visuals must be in the tree and share a viewport and canvas. Before every update, the visual must fill its slot, have zero rotation and pivot offset, and have unit scale.
 
-Only items present before the mutation and still paired with the same slot are animated. New, removed, or replaced items are not interpolated by that update.
+Only items present before the mutation and still paired with the same slot are animated. New, removed, or replaced items are not interpolated by that update, unless `animate_enter` or `animate_exit` is set. Both apply to automatic discovery only: a new slot fades and scales in from `enter_scale`, and a visual whose slot was freed or detached fades and scales out to `exit_scale` above the layout, then is freed with its slot or handed back to the detached one.
 
 ## Options
 
@@ -97,10 +97,16 @@ Only items present before the mutation and still paired with the same slot are a
 | `size_ease`    | `int` or `null`                     | `null`      | Size easing; uses `ease` when unset                  |
 | `stagger_each` | `float`                             | `0.0`       | Additional delay per item in current layout order    |
 | `use_layout_z_order` | `bool`                         | `false`     | Temporarily match visual Z indices to item order; restore original values |
+| `use_global_z_order` | `bool`                         | `false`     | Like `use_layout_z_order`, but absolute: the order holds across branches with different ancestor Z values |
+| `animate_enter`      | `bool`                         | `false`     | Fade and scale in slots that appear during the update |
+| `animate_exit`       | `bool`                         | `false`     | Fade and scale out visuals of slots freed or detached during the update |
+| `enter_scale`        | `float`                        | `0.8`       | Scale an entering visual starts from |
+| `exit_scale`         | `float`                        | `0.8`       | Scale an exiting visual ends at |
+| `discover_nested`    | `bool`                         | `false`     | Search every descendant of the root for slots |
 | `playback`     | `TweensGdPlaybackOptions` or `null` | `null`      | Playback policy; `null` uses the default policy      |
 | `visual_path`  | `NodePath`                          | `^"Visual"` | Direct-child visual name used by automatic discovery |
 
-Pass options to `create_layout()` for controller defaults. Passing `transition_options` to `update()` replaces those defaults for that update; it is not a partial merge. Automatic discovery always uses the controller's `visual_path`. Options are copied when the controller is created and when an update starts.
+Pass options to `create_layout()` for controller defaults. Passing `transition_options` to `update()` replaces those defaults for that update; it is not a partial merge. Automatic discovery always uses the controller's `visual_path` and `discover_nested`. Options are copied when the controller is created and when an update starts.
 
 ## Control and completion
 

@@ -70,7 +70,7 @@ public partial class RowList : Control
 
 ## Discovery
 
-`Tweens.CreateLayout(root, options)` discovers only direct-child `Control` slots under `root`. By default, each slot's direct child named `Visual` is animated. Set `VisualPath` on the controller's options to use a different direct-child name.
+`Tweens.CreateLayout(root, options)` discovers direct-child `Control` slots under `root`, or every descendant slot when `DiscoverNested` is set. By default, each slot's direct child named `Visual` is animated. Set `VisualPath` on the controller's options to use a different direct-child name.
 
 For slots elsewhere below the root, provide explicit pairs:
 
@@ -83,7 +83,7 @@ var items = new[]
 var layout = Tweens.CreateLayoutFromItems(root, items);
 ```
 
-Explicit pairs also support slots under different parent branches, as long as both remain under the controller root. Automatic discovery does not find these nested slots:
+Explicit pairs also support slots under different parent branches, as long as both remain under the controller root. Automatic discovery finds these nested slots only with `DiscoverNested`:
 
 ```csharp
 var layout = Tweens.CreateLayoutFromItems(root,
@@ -99,11 +99,11 @@ var transition = layout.Update(_ =>
 var reason = await transition.End;
 ```
 
-Each visual must still be a direct child of its own slot; parent branches and visuals must share the same canvas. `UseLayoutZOrder` does not guarantee a global draw order across branches with different ancestor Z values.
+Each visual must still be a direct child of its own slot; parent branches and visuals must share the same canvas. `UseLayoutZOrder` does not guarantee a global draw order across branches with different ancestor Z values; `UseGlobalZOrder` does.
 
 Each visual must be a direct child of its slot; each slot must be inside the root. Slots and visuals must be in the tree and share a viewport and canvas. Before every update, the visual must fill its slot, have zero rotation and pivot offset, and have unit scale.
 
-Only items present before the mutation and still paired with the same slot are animated. New, removed, or replaced items are not interpolated by that update.
+Only items present before the mutation and still paired with the same slot are animated. New, removed, or replaced items are not interpolated by that update, unless `AnimateEnter` or `AnimateExit` is set. Both apply to automatic discovery only: a new slot fades and scales in from `EnterScale`, and a visual whose slot was freed or detached fades and scales out to `ExitScale` above the layout, then is freed with its slot or handed back to the detached one.
 
 ## Options
 
@@ -115,10 +115,16 @@ Only items present before the mutation and still paired with the same slot are a
 | `SizeEase`    | `EaseType?`       | `null`         | Size easing; uses `Ease` when unset                  |
 | `StaggerEach` | `double`          | `0`            | Additional delay per item in current layout order    |
 | `UseLayoutZOrder` | `bool`         | `false`        | Temporarily match visual Z indices to item order; restore original values |
+| `UseGlobalZOrder` | `bool`         | `false`        | Like `UseLayoutZOrder`, but absolute: the order holds across branches with different ancestor Z values |
+| `AnimateEnter`    | `bool`         | `false`        | Fade and scale in slots that appear during the update |
+| `AnimateExit`     | `bool`         | `false`        | Fade and scale out visuals of slots freed or detached during the update |
+| `EnterScale`      | `double`       | `0.8`          | Scale an entering visual starts from |
+| `ExitScale`       | `double`       | `0.8`          | Scale an exiting visual ends at |
+| `DiscoverNested`  | `bool`         | `false`        | Search every descendant of the root for slots |
 | `Playback`    | `PlaybackOptions` | default        | Playback policy                                      |
 | `VisualPath`  | `NodePath`        | `Visual`       | Direct-child visual name used by automatic discovery |
 
-Pass options to `CreateLayout()` for controller defaults. Passing `transitionOptions` to `Update()` replaces those defaults for that update; it is not a partial merge. Automatic discovery always uses the controller's `VisualPath`. Options are copied when the controller is created and when an update starts.
+Pass options to `CreateLayout()` for controller defaults. Passing `transitionOptions` to `Update()` replaces those defaults for that update; it is not a partial merge. Automatic discovery always uses the controller's `VisualPath` and `DiscoverNested`. Options are copied when the controller is created and when an update starts.
 
 ## Control and completion
 

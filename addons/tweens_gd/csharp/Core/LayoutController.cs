@@ -49,7 +49,11 @@ public sealed class LayoutController
             return transition;
         }
 
-        var runOptions = (transitionOptions ?? Options) with { VisualPath = Options.VisualPath };
+        var runOptions = (transitionOptions ?? Options) with
+        {
+            VisualPath = Options.VisualPath,
+            DiscoverNested = Options.DiscoverNested,
+        };
         LayoutItem[] items;
         Snapshot[] snapshots;
         try
@@ -80,6 +84,8 @@ public sealed class LayoutController
             return transition;
         }
 
+        if (explicitItems is null && (runOptions.AnimateEnter || runOptions.AnimateExit))
+            snapshots = [.. snapshots, .. PrepareEnterExit(snapshots, runOptions)];
         HoldFirstState(snapshots);
         HoldFirstStateDeferred(transition, snapshots);
         _ = RunAsync(transition, snapshots, runOptions, mutationError, tree);
@@ -90,13 +96,62 @@ public sealed class LayoutController
     {
         if (explicitItems is not null) return [.. explicitItems];
         var items = new List<LayoutItem>();
-        foreach (var child in root.GetChildren())
-        {
-            if (child is not Control slot) continue;
-            if (slot.GetNodeOrNull<Control>(Options.VisualPath) is { } visual)
-                items.Add(new LayoutItem(slot, visual));
-        }
+        Discover(root, items);
         return [.. items];
+    }
+
+    private void Discover(Node parent, List<LayoutItem> items, Control? skip = null)
+    {
+        foreach (var child in parent.GetChildren())
+        {
+            if (child == skip) continue;
+            Control? visual = null;
+            if (child is Control slot && slot.GetNodeOrNull<Control>(Options.VisualPath) is { } found)
+            {
+                visual = found;
+                items.Add(new LayoutItem(slot, found));
+            }
+            if (Options.DiscoverNested) Discover(child, items, visual);
+        }
+    }
+
+    private List<Snapshot> PrepareEnterExit(Snapshot[] snapshots, LayoutOptions options)
+    {
+        var extra = new List<Snapshot>();
+        if (options.AnimateExit)
+        {
+            foreach (var snapshot in snapshots)
+            {
+                var slot = snapshot.Item.LayoutControl;
+                var visual = snapshot.Item.VisualControl;
+                if (snapshot.ItemIsLive || !GodotObject.IsInstanceValid(slot) || !GodotObject.IsInstanceValid(visual)
+                    || visual.IsQueuedForDeletion() || visual.GetParent() != slot) continue;
+                var freed = slot.IsQueuedForDeletion();
+                if (!freed && slot.IsInsideTree()) continue;
+                snapshot.Kind = SnapshotKind.Exiting;
+                snapshot.FreeOnSettle = freed;
+                snapshot.RestoreIndex = (int)visual.GetIndex();
+                slot.RemoveChild(visual);
+                root.AddChild(visual);
+                visual.TopLevel = true;
+                visual.GlobalPosition = snapshot.FirstPosition;
+                visual.Size = snapshot.FirstSize;
+            }
+        }
+        if (options.AnimateEnter)
+        {
+            var known = snapshots.Select(snapshot => snapshot.Item.LayoutControl.GetInstanceId()).ToHashSet();
+            foreach (var item in DiscoverItems())
+            {
+                if (known.Contains(item.LayoutControl.GetInstanceId())) continue;
+                try { item.Validate(root, requireFill: false); }
+                catch (ArgumentException) { continue; }
+                var entering = new Snapshot(root, item) { Kind = SnapshotKind.Entering };
+                item.VisualControl.Modulate = entering.OriginalModulate with { A = 0 };
+                extra.Add(entering);
+            }
+        }
+        return extra;
     }
 
     private void ValidateItems(IReadOnlyList<LayoutItem> items)
@@ -150,11 +205,25 @@ public sealed class LayoutController
 
             var matched = MatchCurrentItems(snapshots);
             var handles = new List<TweenInstance>(matched.Count * 2);
+            var baseZ = options.UseGlobalZOrder ? matched.Select(snapshot => EffectiveZ(snapshot.Item.VisualControl)).DefaultIfEmpty(0).Max() : 0;
             for (var index = 0; index < matched.Count; index++)
             {
                 var snapshot = matched[index];
-                if (options.UseLayoutZOrder) RaiseVisual(snapshot, index);
+                if (options.UseGlobalZOrder) RaiseVisual(snapshot, baseZ + index, absolute: true);
+                else if (options.UseLayoutZOrder) RaiseVisual(snapshot, index, absolute: false);
                 var delay = options.Delay.Seconds + index * options.StaggerEach;
+                if (snapshot.Kind == SnapshotKind.Entering)
+                {
+                    handles.Add(root.TweenFloat(1, options.Duration,
+                        tween =>
+                        {
+                            tween.From = 0;
+                            tween.Delay = delay;
+                            tween.Ease = options.Ease;
+                            tween.OnUpdate = (_, progress) => ApplyEnterProgress(snapshot, progress, options.EnterScale);
+                        }, options.Playback));
+                    continue;
+                }
                 var position = root.TweenFloat(1, options.Duration,
                     tween =>
                     {
@@ -173,6 +242,20 @@ public sealed class LayoutController
                     }, options.Playback);
                 handles.Add(position);
                 handles.Add(size);
+            }
+            var leaving = snapshots.Where(snapshot => snapshot.Kind == SnapshotKind.Exiting).ToList();
+            for (var index = 0; index < leaving.Count; index++)
+            {
+                var snapshot = leaving[index];
+                var delay = options.Delay.Seconds + index * options.StaggerEach;
+                handles.Add(root.TweenFloat(1, options.Duration,
+                    tween =>
+                    {
+                        tween.From = 0;
+                        tween.Delay = delay;
+                        tween.Ease = options.Ease;
+                        tween.OnUpdate = (_, progress) => ApplyExitProgress(snapshot, progress, options.ExitScale);
+                    }, options.Playback));
             }
 
             if (handles.Count == 0)
@@ -329,7 +412,7 @@ public sealed class LayoutController
     {
         foreach (var snapshot in snapshots)
         {
-            if (!snapshot.ItemIsLive) continue;
+            if (!snapshot.ItemIsLive || snapshot.Kind != SnapshotKind.Matched) continue;
             snapshot.Item.VisualControl.GlobalPosition = snapshot.FirstPosition;
             snapshot.Item.VisualControl.Size = snapshot.FirstSize;
             snapshot.Item.VisualControl.Scale = snapshot.OriginalScale;
@@ -343,20 +426,74 @@ public sealed class LayoutController
                 HoldFirstState(snapshots);
         }).CallDeferred();
 
-    private static void RaiseVisual(Snapshot snapshot, int order)
+    private static void RaiseVisual(Snapshot snapshot, int order, bool absolute)
     {
         var visual = snapshot.Item.VisualControl;
-        visual.ZAsRelative = true;
-        visual.ZIndex = order;
+        visual.ZAsRelative = !absolute;
+        visual.ZIndex = (int)Math.Clamp(order, RenderingServer.CanvasItemZMin, RenderingServer.CanvasItemZMax);
         snapshot.ZOrderChanged = true;
+    }
+
+    private static int EffectiveZ(CanvasItem item)
+    {
+        var z = item.ZIndex;
+        return item.ZAsRelative && item.GetParent() is CanvasItem parent ? z + EffectiveZ(parent) : z;
+    }
+
+    private static void ApplyEnterProgress(Snapshot snapshot, float progress, double from)
+    {
+        if (!snapshot.ItemIsLive) return;
+        var visual = snapshot.Item.VisualControl;
+        visual.PivotOffset = visual.Size / 2;
+        visual.Scale = snapshot.OriginalScale * Mathf.Lerp((float)from, 1f, progress);
+        visual.Modulate = snapshot.OriginalModulate with { A = snapshot.OriginalModulate.A * progress };
+    }
+
+    private static void ApplyExitProgress(Snapshot snapshot, float progress, double to)
+    {
+        var visual = snapshot.Item.VisualControl;
+        if (snapshot.Settled || !GodotObject.IsInstanceValid(visual)) return;
+        visual.PivotOffset = visual.Size / 2;
+        visual.Scale = snapshot.OriginalScale * Mathf.Lerp(1f, (float)to, progress);
+        visual.Modulate = snapshot.OriginalModulate with { A = snapshot.OriginalModulate.A * (1 - progress) };
+    }
+
+    private static void SettleExit(Snapshot snapshot)
+    {
+        if (snapshot.Settled) return;
+        snapshot.Settled = true;
+        var visual = snapshot.Item.VisualControl;
+        if (!GodotObject.IsInstanceValid(visual)) return;
+        if (snapshot.FreeOnSettle || !GodotObject.IsInstanceValid(snapshot.Item.LayoutControl))
+        {
+            visual.GetParent()?.RemoveChild(visual);
+            visual.QueueFree();
+            return;
+        }
+        var slot = snapshot.Item.LayoutControl;
+        visual.TopLevel = false;
+        visual.GetParent()?.RemoveChild(visual);
+        slot.AddChild(visual);
+        slot.MoveChild(visual, Math.Min(snapshot.RestoreIndex, (int)slot.GetChildCount() - 1));
+        visual.Position = snapshot.FirstLocalPosition;
+        visual.Size = snapshot.FirstSize;
+        visual.Scale = snapshot.OriginalScale;
+        visual.PivotOffset = snapshot.OriginalPivot;
+        visual.Modulate = snapshot.OriginalModulate;
     }
 
     private static void Settle(IEnumerable<Snapshot> snapshots)
     {
         foreach (var snapshot in snapshots)
         {
+            if (snapshot.Kind == SnapshotKind.Exiting) { SettleExit(snapshot); continue; }
             if (!GodotObject.IsInstanceValid(snapshot.Item.VisualControl)) continue;
             var visual = snapshot.Item.VisualControl;
+            if (snapshot.Kind == SnapshotKind.Entering)
+            {
+                visual.Modulate = snapshot.OriginalModulate;
+                visual.PivotOffset = snapshot.OriginalPivot;
+            }
             if (GodotObject.IsInstanceValid(snapshot.Item.LayoutControl) && visual.GetParent() == snapshot.Item.LayoutControl)
             {
                 if (snapshot.ItemIsLive)
@@ -404,9 +541,18 @@ public sealed class LayoutController
         }
     }
 
+    private enum SnapshotKind { Matched, Entering, Exiting }
+
     private sealed class Snapshot(Control root, LayoutItem item)
     {
         private Control Root { get; } = root;
+        public SnapshotKind Kind { get; set; }
+        public Color OriginalModulate { get; } = item.VisualControl.Modulate;
+        public Vector2 OriginalPivot { get; } = item.VisualControl.PivotOffset;
+        public Vector2 FirstLocalPosition { get; } = item.VisualControl.Position;
+        public int RestoreIndex { get; set; }
+        public bool FreeOnSettle { get; set; }
+        public bool Settled { get; set; }
         public LayoutItem Item { get; } = item;
         public Vector2 FirstPosition { get; } = item.VisualControl.GlobalPosition;
         public Vector2 FirstSize { get; } = item.VisualControl.Size;

@@ -8,6 +8,12 @@ var ease: int = Out.QUAD
 var size_ease: Variant = null
 var stagger_each := 0.0
 var use_layout_z_order := false
+var use_global_z_order := false
+var animate_enter := false
+var animate_exit := false
+var enter_scale := 0.8
+var exit_scale := 0.8
+var discover_nested := false
 var playback: TweensGdPlaybackOptions
 var visual_path: NodePath = ^"Visual"
 
@@ -18,6 +24,10 @@ func validate() -> String:
 		return "Layout delay must be finite and non-negative."
 	if not is_finite(stagger_each) or stagger_each < 0.0:
 		return "Layout stagger_each must be finite and non-negative."
+	if not is_finite(enter_scale) or enter_scale < 0.0:
+		return "Layout enter_scale must be finite and non-negative."
+	if not is_finite(exit_scale) or exit_scale < 0.0:
+		return "Layout exit_scale must be finite and non-negative."
 	var selected_ease: int = ease
 	if not is_finite(Tweens.Easing.evaluate(selected_ease, 0.5)):
 		return "Layout easing is invalid."
@@ -45,6 +55,12 @@ func copy() -> TweensGdLayoutOptions:
 	copied.size_ease = size_ease
 	copied.stagger_each = stagger_each
 	copied.use_layout_z_order = use_layout_z_order
+	copied.use_global_z_order = use_global_z_order
+	copied.animate_enter = animate_enter
+	copied.animate_exit = animate_exit
+	copied.enter_scale = enter_scale
+	copied.exit_scale = exit_scale
+	copied.discover_nested = discover_nested
 	copied.visual_path = visual_path
 	if playback != null:
 		copied.playback = Tweens.playback_options(playback.process_mode, playback.pause_mode, playback.use_unscaled_time)
