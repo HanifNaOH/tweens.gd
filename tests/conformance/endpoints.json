@@ -1,5 +1,6 @@
 {
   "tolerance": 0.000001,
+  "wide_interpolation": {"float": 3e38, "double": 1.7e308, "weights": [0, 0.25, 0.5, 0.75, 1]},
   "cases": [
     {"name":"adds to the current value", "start":2, "by":4, "options":{"duration":1}, "samples":[
       {"delta":0.5,"value":4}, {"delta":0.5,"value":6}]},

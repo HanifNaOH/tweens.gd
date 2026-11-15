@@ -3,12 +3,12 @@
 importer="font_data_dynamic"
 type="FontFile"
 uid="uid://car3kkhm6a2ig"
-path="res://.godot/imported/Figtree.woff2-84da9a3da1f4bb5d41d89c85ae936210.fontdata"
+path="res://.godot/imported/Figtree.ttf-5685200cc6f0d59bb7a6461f15ba3036.fontdata"
 
 [deps]
 
-source_file="res://Fonts/Figtree.woff2"
-dest_files=["res://.godot/imported/Figtree.woff2-84da9a3da1f4bb5d41d89c85ae936210.fontdata"]
+source_file="res://Fonts/Figtree.ttf"
+dest_files=["res://.godot/imported/Figtree.ttf-5685200cc6f0d59bb7a6461f15ba3036.fontdata"]
 
 [params]
 

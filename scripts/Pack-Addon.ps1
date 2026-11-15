@@ -6,6 +6,7 @@ param(
     [switch] $AllowMissingNative
 )
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'ArchiveDirectories.ps1')
 $repository = Split-Path -Parent $PSScriptRoot
 if (!$Version) {
     $project = [xml](Get-Content -LiteralPath (Join-Path $repository 'csharp/tweens.gd.csproj') -Raw)
@@ -43,13 +44,23 @@ $missing = @($libraries | Where-Object { !(Test-Path -LiteralPath (Join-Path $so
 if ($missing.Count -and !$AllowMissingNative) {
     throw "Native libraries are missing: $($missing -join ', ')"
 }
+$entries = [Collections.Generic.SortedDictionary[string, IO.FileInfo]]::new([StringComparer]::Ordinal)
+foreach ($file in $files) {
+    $entries.Add([IO.Path]::GetRelativePath($source, $file.FullName).Replace('\', '/'), $file)
+}
+# Ship the exceptions only in packages, so this checkout's native build outputs stay ignored.
+$entries.Add('.gitignore', (Get-Item -LiteralPath (Join-Path $PSScriptRoot 'templates/addon/.gitignore') -Force))
+$directories = Get-ArchiveDirectories @($entries.Keys | ForEach-Object {
+        "addons/tweens_gd/$_"
+    })
 $stream = [IO.File]::Open($destination, [IO.FileMode]::Create)
 $zip = [IO.Compression.ZipArchive]::new($stream, [IO.Compression.ZipArchiveMode]::Create)
 try {
-    foreach ($file in $files) {
-        $relative = [IO.Path]::GetRelativePath($source, $file.FullName).Replace('\', '/')
+    Add-ArchiveDirectories $zip $directories
+    foreach ($relative in $entries.Keys) {
+        $file = $entries[$relative]
         $native = $relative -in $libraries
-        if ($file.Extension -notin '.gd', '.uid', '.md', '.cs', '.gdextension' -and $file.Name -ne 'LICENSE' -and !$native) {
+        if ($file.Extension -notin '.gd', '.uid', '.md', '.cs', '.gdextension' -and $file.Name -notin 'LICENSE', '.gitignore' -and !$native) {
             throw "Unexpected addon file: $relative"
         }
         $bytes = [IO.File]::ReadAllBytes($file.FullName)
@@ -75,13 +86,21 @@ finally {
 $verify = [IO.Compression.ZipFile]::OpenRead($destination)
 try {
     $names = @($verify.Entries | ForEach-Object FullName)
-    foreach ($required in 'tweens.gd', 'catalog.gd', 'adapter.gd', 'shader_adapter.gd', 'tweens_gd.gdextension', 'LICENSE', 'THIRD-PARTY-NOTICES.md', 'README.md', 'CATALOG.md', 'csharp/README.md', 'csharp/Godot/TweenRunner.cs', 'csharp/Generated/Position2D.g.cs') {
+    foreach ($required in '.gitignore', 'tweens.gd', 'catalog.gd', 'adapter.gd', 'shader_adapter.gd', 'tweens_gd.gdextension', 'LICENSE', 'THIRD-PARTY-NOTICES.md', 'README.md', 'CATALOG.md', 'csharp/README.md', 'csharp/Godot/TweenRunner.cs', 'csharp/Generated/Position2D.g.cs') {
         if ("addons/tweens_gd/$required" -notin $names) {
             throw "Package lacks $required"
         }
     }
-    if ($names.Count -ne $files.Count) {
+    if ($names.Count -ne $entries.Count + $directories.Count) {
         throw 'Package entry count mismatch.'
+    }
+    $written = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    foreach ($name in $names) {
+        $parent = $name.Substring(0, $name.TrimEnd('/').LastIndexOf('/') + 1)
+        if ($parent -and !$written.Contains($parent)) {
+            throw "Package entry precedes its directory: $name"
+        }
+        $null = $written.Add($name)
     }
 }
 finally {
@@ -90,4 +109,4 @@ finally {
 if ($missing.Count) {
     Write-Warning "Packaged without $($missing.Count) native libraries; this archive only runs where they are present."
 }
-Write-Output "Packaged $($files.Count) addon files: $destination"
+Write-Output "Packaged $($entries.Count) addon files: $destination"

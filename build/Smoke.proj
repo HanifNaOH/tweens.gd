@@ -14,6 +14,7 @@
   <Target Name="Stage">
     <Error Condition="'$(Version)' == ''" Text="Supply -p:Version matching the packages in artifacts/packages." />
     <VerifyPackages Directory="$(PackageDirectory)" Version="$(Version)" />
+    <Exec Command="pwsh -NoProfile -File &quot;$(RepositoryRoot)scripts/Test-AddonGitIgnore.ps1&quot; -Archive &quot;$(PackageDirectory)/tweens.gd-$(Version).zip&quot;" />
     <ItemGroup>
       <AddonFixture Include="../tests/smoke/addon/**/*" />
       <PackageFixture Include="../tests/smoke/package/**/*" />
@@ -29,8 +30,10 @@
          the default C# version, like a stock Godot 4.7 project. -->
     <Exec Command="dotnet build &quot;$(ConsumerDirectory)/addon/Consumer.csproj&quot; -c Debug" />
     <Exec Command="dotnet build &quot;$(ConsumerDirectory)/addon/Consumer.csproj&quot; -c Release" />
-    <!-- 2dog's build target imports with the packaged editor library before either smoke test runs. -->
-    <Exec Command="dotnet build &quot;$(ConsumerDirectory)/addon/host/Smoke.csproj&quot; -c Release -p:TwoDogVersion=$(TwoDogVersion)" />
+    <!-- 2dog imports with the packaged editor library before either smoke test runs. The import script retries only
+         Godot's native import crash. -->
+    <Exec Command="dotnet build &quot;$(ConsumerDirectory)/addon/host/Smoke.csproj&quot; -c Release -p:TwoDogVersion=$(TwoDogVersion) -p:TwoDogAutoImport=false" />
+    <Exec Command="pwsh -NoProfile -File &quot;$(RepositoryRoot)scripts/Import-GodotProject.ps1&quot; -Project &quot;$(ConsumerDirectory)/addon/host/Smoke.csproj&quot; -Property Configuration=Release,TwoDogVersion=$(TwoDogVersion)" />
     <Exec Command="dotnet run --project &quot;$(ConsumerDirectory)/addon/host/Smoke.csproj&quot; -c Release --no-build --no-restore -- csharp" Timeout="120000" />
     <Exec Command="dotnet run --project &quot;$(ConsumerDirectory)/addon/host/Smoke.csproj&quot; -c Release --no-build --no-restore -- gdscript" Timeout="120000" />
     <Exec Command="dotnet restore &quot;$(ConsumerDirectory)/package/Consumer.csproj&quot; -p:Version=$(Version) --configfile &quot;$(ConsumerDirectory)/package/NuGet.config&quot; --packages &quot;$(ConsumerDirectory)/package-cache&quot; --force" />

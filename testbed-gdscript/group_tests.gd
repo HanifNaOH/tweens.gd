@@ -299,6 +299,20 @@ func _conformance() -> bool:
 		var tolerance: float = data.tolerance
 		check(absf(root_value - expected) <= tolerance, case_name + " independent root delta")
 		scheduler.dispose()
+	for order: Array in data.settled_failure_orders:
+		var scheduler := TweensGdScheduler.new()
+		var cancelled := start(scheduler)
+		cancelled.cancel()
+		var running := start(scheduler)
+		var failed := scheduler.add(RefCounted.new(), T.value(0.0, 1.0, -1.0))
+		var members: Array[TweensGdHandle] = [cancelled, running, failed]
+		var ordered: Array[TweensGdHandle] = []
+		for index: int in order: ordered.append(members[index])
+		var group := T.group(ordered)
+		check(group.is_settled, "pre-settled failure orders settle")
+		check(running.completion_reason == T.Reason.CANCELLED, "pre-settled failure orders cancel the running member")
+		check(group.errors == [failed.error], "pre-settled failure orders collect the failure exactly once")
+		scheduler.dispose()
 	return true
 
 func _references() -> bool:

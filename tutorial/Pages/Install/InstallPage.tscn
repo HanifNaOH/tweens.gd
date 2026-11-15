@@ -71,7 +71,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "Add tweens.gd to a Godot C# project. Choose the shared addon for both languages, or NuGet for C# alone."
+Markdown = "Take the addon for C# and GDScript, or NuGet for C# alone."
 
 [node name="LeadGDScript" type="RichTextLabel" parent="Scroll/Margin/Column/Content" groups=["gdscript"]]
 layout_mode = 2
@@ -81,7 +81,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "Add tweens.gd to a Godot 4.7.2 project. The addon includes the GDScript API and its native extension; no .NET runtime is needed."
+Markdown = "One addon for Godot 4.7.2, with its native extension built in. No .NET needed."
 
 [node name="ChooseGap" type="Control" parent="Scroll/Margin/Column/Content"]
 custom_minimum_size = Vector2(0, 8)
@@ -125,14 +125,14 @@ texture = ExtResource("7_godot-asset-store")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Text" type="RichTextLabel" parent="Scroll/Margin/Column/Content/Cards/Store/Body"]
+[node name="Text" type="RichTextLabel" parent="Scroll/Margin/Column/Content/Cards/Store/Body" groups=["csharp"]]
 layout_mode = 2
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "Get the shared addon with support for both C# and GDScript."
+Markdown = "The addon, for C# and GDScript."
 
 [node name="Steps" type="RichTextLabel" parent="Scroll/Margin/Column/Content/Cards/Store/Body"]
 layout_mode = 2
@@ -141,7 +141,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "1. Download it from the [Godot Asset Store](https://store.godotengine.org/asset/outfox/tweens/).\n2. Unpack it into your project root, keeping the entire `addons/tweens_gd/` directory."
+Markdown = "1. Download it from the [Godot Asset Store](https://store.godotengine.org/asset/outfox/tweens/).\n2. Unpack the whole `addons/tweens_gd/` folder into your project root."
 
 [node name="NuGet" type="PanelContainer" parent="Scroll/Margin/Column/Content/Cards" groups=["csharp"]]
 layout_mode = 2
@@ -178,7 +178,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "Add the pure C# library through your package manager."
+Markdown = "The C# library alone."
 
 [node name="Command" parent="Scroll/Margin/Column/Content/Cards/NuGet/Body" instance=ExtResource("9_codeview")]
 layout_mode = 2
@@ -223,7 +223,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "Get the addon ZIP from the [latest release](https://github.com/outfox/tweens.gd/releases/latest).\nChoose the packaged addon from the release assets, then unpack it into your project root."
+Markdown = "Unpack the addon ZIP from the [latest release](https://github.com/outfox/tweens.gd/releases/latest) into your project root."
 
 [node name="BuildGap" type="Control" parent="Scroll/Margin/Column/Content"]
 custom_minimum_size = Vector2(0, 8)
@@ -242,7 +242,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "Build your game with Godot 4.7.2 .NET. No plugin activation or autoload is required."
+Markdown = "Build with Godot 4.7.2 .NET. There is no plugin to enable and no autoload to add."
 
 [node name="OneSource" type="PanelContainer" parent="Scroll/Margin/Column/Content" groups=["csharp"]]
 layout_mode = 2
@@ -273,7 +273,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "Keep the entire `addons/tweens_gd/` directory so its scripts, native libraries, and licenses stay together. The entry script should be at `res://addons/tweens_gd/tweens.gd`. If you choose the combined addon, its C# files can stay in a GDScript-only project."
+Markdown = "Keep `addons/tweens_gd/` whole: its scripts, native libraries, and licenses belong together. Its C# files can stay in a GDScript-only project."
 
 [node name="Web" type="PanelContainer" parent="Scroll/Margin/Column/Content" groups=["gdscript"]]
 layout_mode = 2
@@ -332,7 +332,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "Attach this script to any `Sprite2D` and run the scene. If the icon pops in, tweens.gd works. This project runs it right here, in the language you chose."
+Markdown = "Attach this script to any `Sprite2D` and run the scene. If the icon pops in, tweens.gd works."
 
 [node name="SceneLink" parent="Scroll/Margin/Column/Content" instance=ExtResource("scene_link")]
 
@@ -354,10 +354,11 @@ theme_override_constants/separation = 20
 [node name="Stage" parent="Scroll/Margin/Column/Content/Demo/Margin/Layout" node_paths=PackedStringArray("SceneLink") instance=ExtResource("11_stage")]
 SceneLink = NodePath("../../../../SceneLink")
 unique_name_in_owner = true
-custom_minimum_size = Vector2(360, 0)
+custom_minimum_size = Vector2(260, 0)
 layout_mode = 2
-size_flags_horizontal = 1
-size_flags_vertical = 0
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.6
+size_flags_vertical = 4
 World = Vector2i(640, 360)
 
 [node name="Side" type="VBoxContainer" parent="Scroll/Margin/Column/Content/Demo/Margin/Layout"]

@@ -5,13 +5,57 @@ name: GDExtension
 
 on:
   workflow_call:
+    inputs:
+      rebuild:
+        description: Build every library even when the cache holds a build of the same sources.
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 jobs:
-  build:
+  # The libraries depend only on the gdextension/ sources, the godot-cpp commit and this workflow, which pins the
+  # toolchains. A cache hit stands in for all build jobs under the same artifact pattern.
+  cache:
     if: github.repository == 'outfox/tweens.gd'
+    name: Restore cached libraries
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 5
+    outputs:
+      key: ${{ steps.key.outputs.key }}
+      build: ${{ inputs.rebuild || steps.restore.outputs.cache-hit != 'true' }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Compute cache key
+        id: key
+        env:
+          SOURCES: ${{ hashFiles('gdextension/**', '!gdextension/**/*.md', '!gdextension/godot-cpp/**',
+            '.github/workflows/gdextension.yml') }}
+        run: echo "key=gdextension-$(git rev-parse HEAD:gdextension/godot-cpp)-$SOURCES" >> "$GITHUB_OUTPUT"
+      - name: Restore libraries
+        id: restore
+        if: ${{ !inputs.rebuild }}
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: addons/tweens_gd/bin
+          key: ${{ steps.key.outputs.key }}
+      - if: steps.restore.outputs.cache-hit == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: gdextension-cached
+          path: addons/tweens_gd/bin/
+          if-no-files-found: error
+
+  build:
+    needs: cache
+    if: needs.cache.outputs.build == 'true'
     name: Build ${{ matrix.platform }} ${{ matrix.arch }}${{ matrix.threads == 'no' && ' (no threads)' || '' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -83,18 +127,39 @@ jobs:
           path: addons/tweens_gd/bin/
           if-no-files-found: error
 
+  # Branch caches are visible to their own branch; the default branch's caches are visible to every branch.
+  save:
+    needs: [cache, build]
+    if: ${{ !inputs.rebuild && needs.build.result == 'success' }}
+    name: Cache libraries
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: gdextension-*
+          path: addons/tweens_gd/bin
+          merge-multiple: true
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: addons/tweens_gd/bin
+          key: ${{ needs.cache.outputs.key }}
+
+  # GDScript is the same on every platform, and Linux here and CI's Windows job run it on every change.
+  # macOS checks its own library, so it runs only when the libraries are built.
   test:
-    if: github.repository == 'outfox/tweens.gd'
+    needs: [cache, build]
+    if: ${{ github.repository == 'outfox/tweens.gd' && !cancelled() && !failure() }}
     name: Test GDScript on ${{ matrix.name }}
-    needs: build
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.name == 'macOS' && 'blacksmith-6vcpu-macos-latest' || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { name: Linux, os: blacksmith-4vcpu-ubuntu-2404, asset: Godot_v4.7.2-stable_linux.x86_64.zip, godot: ./Godot_v4.7.2-stable_linux.x86_64 }
-          - { name: macOS, os: blacksmith-6vcpu-macos-latest, asset: Godot_v4.7.2-stable_macos.universal.zip, godot: ./Godot.app/Contents/MacOS/Godot }
+        name: ${{ fromJSON(needs.cache.outputs.build == 'true' && '["Linux", "macOS"]' || '["Linux"]') }}
+    env:
+      ASSET: ${{ matrix.name == 'macOS' && 'Godot_v4.7.2-stable_macos.universal.zip' || 'Godot_v4.7.2-stable_linux.x86_64.zip' }}
+      GODOT: ${{ matrix.name == 'macOS' && './Godot.app/Contents/MacOS/Godot' || './Godot_v4.7.2-stable_linux.x86_64' }}
     defaults:
       run:
         shell: bash
@@ -108,8 +173,6 @@ jobs:
           path: addons/tweens_gd/bin
           merge-multiple: true
       - name: Download Godot
-        env:
-          ASSET: ${{ matrix.asset }}
         run: |
           base=https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable
           curl -fsSLO "$base/$ASSET"
@@ -122,8 +185,6 @@ jobs:
           cp -R addons/tweens_gd testbed-gdscript/addons/
           cp tests/conformance/*.json testbed-gdscript/conformance/
       - name: Test with the official Godot build
-        env:
-          GODOT: ${{ matrix.godot }}
         run: |
           # Godot 4.7.2 can crash on exit after registering an extension it found during the import (debug_draw_3d
           # does too). Tolerate only that crash, then require the registration it has already written.

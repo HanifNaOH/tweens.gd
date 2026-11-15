@@ -7,9 +7,11 @@ tooling is needed.
 ## Open and run
 
 1. Install Godot **.NET 4.7.2** and the **.NET 8 SDK or later**.
-2. Extract this entire ZIP into a new folder.
-3. Import `project.godot` in Godot's project manager and open it. Let the editor
-   finish importing the included assets and native extension.
+2. In Godot's Project Manager, click **Import** and select
+   `tweens.gd-tutorial.zip` directly.
+3. Choose an empty destination folder, then import and open the project. Godot
+   extracts the ZIP for you; let the editor finish importing the included assets
+   and native extension.
 4. Build the C# project, then press **F5** to run the tutorial. Choose C# or
    GDScript in the header.
 

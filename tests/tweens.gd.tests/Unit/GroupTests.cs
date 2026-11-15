@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Moritz Voss
 
+using System.Text.Json;
 using tweens.gd.Tests.Support;
 
 namespace tweens.gd.Tests.Unit;
@@ -88,6 +89,27 @@ public class GroupTests
         var stopped = Group.Of(cancelled, sibling);
         Assert.True(stopped.IsTerminal);
         Assert.Equal(Reason.Cancelled, sibling.CompletionReason);
+    }
+
+    [Fact]
+    public async Task AlreadySettledFailuresAreCollectedOnceRegardlessOfMemberOrder()
+    {
+        using var data = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "conformance", "groups.json")));
+        foreach (var order in data.RootElement.GetProperty("settled_failure_orders").EnumerateArray())
+        {
+            using var scheduler = new TweenScheduler();
+            var cancelled = Start(scheduler, 1);
+            cancelled.Cancel();
+            var running = Start(scheduler, 1);
+            var failed = Start(scheduler, 1, d => d.OnStart = _ => throw new FormatException("member failure"));
+            scheduler.Update(0);
+            TweenInstance[] members = [cancelled, running, failed];
+            var group = Group.Of(order.EnumerateArray().Select(i => members[i.GetInt32()]).ToArray());
+            Assert.True(group.IsTerminal);
+            Assert.Equal(Reason.Cancelled, running.CompletionReason);
+            Assert.Same(failed.Error, group.Error);
+            await Assert.ThrowsAsync<FormatException>(() => group.End);
+        }
     }
 
     [Fact]

@@ -1,6 +1,6 @@
 [gd_resource type="Theme" format=3 uid="uid://cd0hlqb768p7e"]
 
-[ext_resource type="FontFile" uid="uid://car3kkhm6a2ig" path="res://Fonts/Figtree.woff2" id="1_figtree"]
+[ext_resource type="FontFile" uid="uid://car3kkhm6a2ig" path="res://Fonts/Figtree.ttf" id="1_figtree"]
 [ext_resource type="FontFile" uid="uid://de7xhfxfeddec" path="res://Fonts/JetBrainsMono-Regular.ttf" id="2_mono"]
 
 [sub_resource type="FontVariation" id="FontVariation_Bold"]
@@ -737,6 +737,13 @@ content_margin_top = 7.0
 content_margin_right = 16.0
 content_margin_bottom = 7.0
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_SceneLinkLive"]
+resource_name = "Scene link, live"
+content_margin_left = 14.0
+content_margin_top = 10.0
+content_margin_right = 20.0
+content_margin_bottom = 10.0
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_Scrollgrabber"]
 resource_name = "Scroll grabber"
 content_margin_left = 5.0
@@ -978,6 +985,8 @@ RichTextLabel/fonts/mono_font = SubResource("FontVariation_Code")
 RichTextLabel/fonts/normal_font = SubResource("FontVariation_Body")
 SceneLink/base_type = &"PanelContainer"
 SceneLink/styles/panel = SubResource("StyleBoxEmpty_SceneLink")
+SceneLinkLive/base_type = &"PanelContainer"
+SceneLinkLive/styles/panel = SubResource("StyleBoxEmpty_SceneLinkLive")
 SceneLinkCaption/base_type = &"Label"
 SceneLinkCaption/font_sizes/font_size = 14
 SceneLinkCaption/fonts/font = SubResource("FontVariation_Bold")

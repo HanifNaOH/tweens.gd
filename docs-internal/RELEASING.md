@@ -117,6 +117,9 @@ dotnet msbuild build/SmokeTutorial.proj
 
 The addon ZIP is rooted at `addons/tweens_gd/` and includes both languages,
 generated definitions, native libraries, documentation and licenses. It contains
+an addon-local `.gitignore` that keeps bundled files visible despite common
+project ignore rules such as `[Bb]in/` and `*.dll`. This file is added only when
+packing; native build outputs in the repository stay ignored. The ZIP contains
 no build projects or tools that users must install. Packing requires every native
 library named in the manifest. For local testing when libraries for other
 platforms are unavailable, pass `-AllowMissingNative` to both `Pack-Addon.ps1`

@@ -303,8 +303,8 @@ Color = Color(0.78431374, 0.40784314, 0.3529412, 1)
 
 [node name="Credit" type="Node3D" parent="Stations/FromToStation" unique_id=133623731]
 unique_name_in_owner = true
-editor_description = "Floats in the sky above the dot before it drops; the animation raises it from below. High above the page, its shadow would only smudge the paper."
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.06, 2.5, -1.6)
+editor_description = "Floats in the sky; the animation raises it from below. The robot's foot sits just in front of the dot's first spot on the page, so the dot can hide behind it and drop out of it. High above the page, its shadow would only smudge the paper."
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, -1.1872, 1.76, 0.08)
 
 [node name="Godot" type="Sprite3D" parent="Stations/FromToStation/Credit" unique_id=269906397]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7055085, 0)
@@ -312,6 +312,12 @@ cast_shadow = 0
 pixel_size = 0.002118644
 alpha_cut = 2
 texture = ExtResource("4_godot")
+
+[node name="Hatch" type="Marker3D" parent="Stations/FromToStation/Credit/Godot" unique_id=1876543210]
+unique_name_in_owner = true
+editor_description = "The middle of the robot's foot, where the dot drops out of it."
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.254, -0.6715, 0)
+gizmo_extents = 0.1
 
 [node name="Line" type="Node3D" parent="Stations/FromToStation/Credit" unique_id=2054735561]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5510169, 0)
@@ -430,7 +436,7 @@ material_override = SubResource("StandardMaterial3D_1oqau")
 mesh = SubResource("QuadMesh_yq28r")
 
 [node name="Slow" type="Label3D" parent="Stations/EaseStation" unique_id=1743007977]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 2.85, 0.005, -0.7)
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 2.85, 0.005, -0.95)
 pixel_size = 0.004
 offset = Vector2(0, -17.5)
 modulate = Color(0.23921569, 0.16470589, 0.13333334, 0.55)
@@ -441,7 +447,7 @@ outline_size = 0
 vertical_alignment = 2
 
 [node name="Fast" type="Label3D" parent="Stations/EaseStation" unique_id=150388272]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 5.1, 0.005, -0.7)
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 5.1, 0.005, -0.95)
 pixel_size = 0.004
 offset = Vector2(0, -17.5)
 modulate = Color(0.23921569, 0.16470589, 0.13333334, 0.55)
@@ -452,7 +458,7 @@ outline_size = 0
 vertical_alignment = 2
 
 [node name="SlowAgain" type="Label3D" parent="Stations/EaseStation" unique_id=1249271489]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 7.35, 0.005, -0.7)
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 7.35, 0.005, -0.95)
 pixel_size = 0.004
 offset = Vector2(0, -17.5)
 modulate = Color(0.23921569, 0.16470589, 0.13333334, 0.55)

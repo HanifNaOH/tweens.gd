@@ -67,7 +67,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "No, you're not seeing things: there's more than one way to tween a ferret, and that's fully intentional. While developing tweens.gd, we set out to solve at least two, probably four, problems:"
+Markdown = "There's more than one way to tween a ferret. Two syntaxes, Structured and Convenient, cover four needs, and both take safe or sweet endpoints."
 
 [node name="Needs" type="Container" parent="Scroll/Margin/Column/Content"]
 layout_mode = 2
@@ -93,7 +93,7 @@ text = "Fire once"
 layout_mode = 2
 size_flags_vertical = 3
 theme_type_variation = &"DoorHint"
-text = "A one-off that just does its thing."
+text = "Start a one-off motion."
 autowrap_mode = 3
 
 [node name="CSharp" type="Label" parent="Scroll/Margin/Column/Content/Needs/FireOnce/Body" groups=["csharp"]]
@@ -125,7 +125,7 @@ text = "Set values each time"
 layout_mode = 2
 size_flags_vertical = 3
 theme_type_variation = &"DoorHint"
-text = "Destinations or timings you want to specify each time."
+text = "New values each call."
 autowrap_mode = 3
 
 [node name="CSharp" type="Label" parent="Scroll/Margin/Column/Content/Needs/EachTime/Body" groups=["csharp"]]
@@ -157,7 +157,7 @@ text = "Several targets"
 layout_mode = 2
 size_flags_vertical = 3
 theme_type_variation = &"DoorHint"
-text = "The same motion, applied to several different nodes."
+text = "Start one motion on many nodes."
 autowrap_mode = 3
 
 [node name="CSharp" type="Label" parent="Scroll/Margin/Column/Content/Needs/Targets/Body" groups=["csharp"]]
@@ -189,7 +189,7 @@ text = "Small variations"
 layout_mode = 2
 size_flags_vertical = 3
 theme_type_variation = &"DoorHint"
-text = "Small variations for that extra juice."
+text = "Vary a copy, such as its delay."
 autowrap_mode = 3
 
 [node name="CSharp" type="Label" parent="Scroll/Margin/Column/Content/Needs/Variations/Body" groups=["csharp"]]
@@ -203,15 +203,6 @@ layout_mode = 2
 size_flags_horizontal = 0
 theme_type_variation = &"ApiChip"
 text = "hop.with_delay(0.2)"
-
-[node name="Between" type="RichTextLabel" parent="Scroll/Margin/Column/Content"]
-layout_mode = 2
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-autowrap_mode = 3
-script = ExtResource("5_prose")
-Markdown = "Between them, the Structured and Convenient syntaxes cover all four, and both take safe or sweet endpoints."
 
 [node name="Gap1" type="Control" parent="Scroll/Margin/Column/Content"]
 custom_minimum_size = Vector2(0, 12)
@@ -250,7 +241,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "The **Structured** syntax creates a strongly typed, immutable record struct definition to reuse, or to vary with the `with` keyword."
+Markdown = "**Structured** creates an immutable definition to reuse, or to vary with `with`."
 
 [node name="AboveGDScript" type="RichTextLabel" parent="Scroll/Margin/Column/Content/Section1/Compare/Left" groups=["gdscript"]]
 layout_mode = 2
@@ -259,7 +250,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "The **Structured** syntax creates a definition object to reuse, or to vary with `with_*()` copies."
+Markdown = "**Structured** creates a definition to reuse, or to vary with `with_*()` copies."
 
 [node name="Variants" type="PanelContainer" parent="Scroll/Margin/Column/Content/Section1/Compare/Left"]
 layout_mode = 2
@@ -288,7 +279,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "The **Convenient** syntax defines and starts a local animation through an extension method, available on a wide variety of nodes and their descendants."
+Markdown = "**Convenient** defines and starts a tween in one extension method call on the node."
 
 [node name="AboveGDScript" type="RichTextLabel" parent="Scroll/Margin/Column/Content/Section1/Compare/Right" groups=["gdscript"]]
 layout_mode = 2
@@ -297,7 +288,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "The **Convenient** syntax creates and starts a local animation in one `Tweens.play()` expression."
+Markdown = "**Convenient** creates and starts a tween in one `Tweens.play()` expression."
 
 [node name="Variants" type="PanelContainer" parent="Scroll/Margin/Column/Content/Section1/Compare/Right"]
 layout_mode = 2
@@ -322,7 +313,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "A single line is often all you need... until you don't, which is when the **Structured** syntax comes in super clutch. It's very useful once your game has a large number of tweens or you want to work on it with multiple devs."
+Markdown = "One line is often enough. Structured definitions help once a game has many tweens, or several people working on it."
 
 [node name="BelowGDScript" type="RichTextLabel" parent="Scroll/Margin/Column/Content/Section1/Compare/Right" groups=["gdscript"]]
 layout_mode = 2
@@ -331,7 +322,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "GDScript uses helpers rather than node extensions. Thus, it's always somewhat close to the Structured way of doing things. Just store the definition in a `var` and you're golden!"
+Markdown = "GDScript has helpers instead of node extensions, so both forms build a definition. Store it in a `var` to reuse it."
 
 [node name="SceneLink" parent="Scroll/Margin/Column/Content/Section1" instance=ExtResource("scene_link")]
 
@@ -364,15 +355,6 @@ offset_left = 12.0
 offset_top = 8.0
 offset_right = 212.0
 offset_bottom = 28.0
-
-[node name="After" type="RichTextLabel" parent="Scroll/Margin/Column/Content/Section1"]
-layout_mode = 2
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-autowrap_mode = 3
-script = ExtResource("5_prose")
-Markdown = "These are alternative ways to start the same motion. Both return a handle when played."
 
 [node name="Gap2" type="Control" parent="Scroll/Margin/Column/Content"]
 custom_minimum_size = Vector2(0, 12)
@@ -411,7 +393,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "A Godot value states the endpoint's type; a tuple leaves it out. The compiler checks both, down to the number of components and that each one is a number."
+Markdown = "A Godot value names the endpoint's type; a tuple leaves it out. The compiler checks both."
 
 [node name="AboveGDScript" type="RichTextLabel" parent="Scroll/Margin/Column/Content/Section2/Compare/Left" groups=["gdscript"]]
 layout_mode = 2
@@ -476,15 +458,6 @@ CSharpPath = "SyntaxSugar/SyntaxSugar.cs"
 GDScriptPath = "SyntaxSugar/syntax_sugar.gd"
 Compact = true
 
-[node name="BelowCSharp" type="RichTextLabel" parent="Scroll/Margin/Column/Content/Section2/Compare/Right" groups=["csharp"]]
-layout_mode = 2
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-autowrap_mode = 3
-script = ExtResource("5_prose")
-Markdown = "Arrays read closest to GDScript, which is why the array syntax exists."
-
 [node name="BelowGDScript" type="RichTextLabel" parent="Scroll/Margin/Column/Content/Section2/Compare/Right" groups=["gdscript"]]
 layout_mode = 2
 bbcode_enabled = true
@@ -533,7 +506,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "All three move to the same position, and structured constructors accept the same forms."
+Markdown = "All three move to the same position. Constructors accept the same forms."
 
 [node name="AfterGDScript" type="RichTextLabel" parent="Scroll/Margin/Column/Content/Section2" groups=["gdscript"]]
 layout_mode = 2
@@ -542,7 +515,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "Both move to the same position, and definition helpers accept the same forms. GDScript has no tuple syntax or C#'s compile-time endpoint checks."
+Markdown = "Both move to the same position. GDScript has no tuples or compile-time endpoint checks."
 
 [node name="TableCSharp" type="PanelContainer" parent="Scroll/Margin/Column/Content/Section2" groups=["csharp"]]
 layout_mode = 2
@@ -864,7 +837,7 @@ mouse_filter = 2
 [node name="LeftLane" type="Label" parent="Scroll/Margin/Column/Content/Section3/Stage/Chrome"]
 layout_mode = 0
 theme_type_variation = &"CaptionLabel"
-text = "Clean: explicit & readable"
+text = "Clean"
 offset_left = 12.0
 offset_top = 8.0
 offset_right = 212.0
@@ -873,7 +846,7 @@ offset_bottom = 28.0
 [node name="RightLane" type="Label" parent="Scroll/Margin/Column/Content/Section3/Stage/Chrome"]
 layout_mode = 1
 theme_type_variation = &"CaptionLabel"
-text = "Quick: convenient & concise"
+text = "Quick"
 anchors_preset = 0
 anchor_left = 0.5
 anchor_right = 0.5
@@ -928,7 +901,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "Set any other field on the definition. Definitions are mutable, so vary a copy with `with_*()` to leave the original unchanged."
+Markdown = "Set any other field on the definition, or vary a copy with `with_*()` to leave the original unchanged."
 
 [node name="Variants" type="PanelContainer" parent="Scroll/Margin/Column/Content/Section4/Compare/Left"]
 layout_mode = 2

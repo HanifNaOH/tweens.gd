@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Moritz Voss
 // A leaf for GPU particles: a pointed oval facing the camera, fluttering as if it turned about its midrib. Particle
-// colors tint it. It sinks into the page instead of showing through it.
+// colors tint it. It sinks into the page instead of showing through it, and shrinks away near the camera instead of
+// filling the view.
 shader_type spatial;
 render_mode unshaded, cull_disabled, alpha_to_coverage;
 
@@ -10,6 +11,9 @@ uniform float shape = 1.8;
 // The range of flutter rates, in radians per second.
 uniform float flutter_min = 3.0;
 uniform float flutter_max = 8.0;
+// The distances from the camera, in metres, over which a leaf grows from nothing to full size.
+uniform float near_start = 1.0;
+uniform float near_end = 3.0;
 
 varying float turn;
 
@@ -21,6 +25,7 @@ void vertex() {
 	float seed = float(INSTANCE_ID);
 	turn = cos(TIME * mix(flutter_min, flutter_max, hash(seed)) + 6.2832 * hash(seed + 1.7));
 	VERTEX.x *= max(abs(turn), 0.08);
+	VERTEX *= smoothstep(near_start, near_end, -(VIEW_MATRIX * vec4(MODEL_MATRIX[3].xyz, 1.0)).z);
 	// A particle billboard that keeps the particle's spin and scale, as BaseMaterial3D builds it.
 	mat4 world = mat4(normalize(INV_VIEW_MATRIX[0]), normalize(INV_VIEW_MATRIX[1]), normalize(INV_VIEW_MATRIX[2]), MODEL_MATRIX[3]);
 	float spin = INSTANCE_CUSTOM.x;

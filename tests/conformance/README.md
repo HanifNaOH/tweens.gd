@@ -10,6 +10,10 @@ The tolerance accommodates C#'s single-precision easing/progress values.
 These fixtures establish timing/easing agreement, not full API or export parity.
 Engine lifetime, callbacks and property writes have separate integration tests.
 
+`groups.json` also permutes an already-cancelled, running, and failed member to
+check that construction collects the failure once. `endpoints.json` includes
+wide scalar and vector interpolation samples near opposite finite limits.
+
 `easing.json` supplies composed In/Out samples at the blend boundaries, inside
 the transition, with missing legs and with a linear In/Out split. The neutral split is 0.5; 0 and 1 select the full Out and In profiles. `blend` gives the centered
 window, and the optional `blendType` the method (default: Makima). Non-polynomial

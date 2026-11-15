@@ -119,13 +119,13 @@ func wordmark() -> Array[TweensGdGroup]:
 	var plays: Array[TweensGdGroup] = []
 	for i in targets.logo.size(): plays.append(Tweens.animate(targets.logo[i], drop(i)))
 	plays.append(Tweens.animate(targets.confetti, burst()))
-	plays.append(Tweens.animate(targets.subtitle, timeline(standing(dotted() + EIGHTH, Out.BACK))))
+	plays.append(Tweens.animate(targets.subtitle, revealed(dotted() + EIGHTH)))
 	return plays
 
 func closing() -> Array[TweensGdGroup]:
 	var plays: Array[TweensGdGroup] = []
 	for i in targets.taglines.size():
-		plays.append(Tweens.animate(targets.taglines[i], timeline(standing(cue(Scene.CLOSING) + EIGHTH * i, Out.BACK))))
+		plays.append(Tweens.animate(targets.taglines[i], revealed(cue(Scene.CLOSING) + EIGHTH * i)))
 	return plays
 
 ## When a definition is printed, shrinks to its headword, gains new words, and blows away.
@@ -167,6 +167,8 @@ func landing(i: int) -> float: return cue(Scene.BOUNCE) + HOP + BEAT * i - (EIGH
 func takeoff() -> float: return landing(0) - BEAT
 func stretch(i: int) -> float: return cue(Scene.ELASTIC) + 3 * BEAT + EIGHTH * i
 func waypoint(i: int) -> float: return cue(Scene.KEYFRAMES) + BEAT * i
+# When the dot drops out of the robot and hangs under it until the next bar.
+static func hatched() -> float: return bars(0) + 2 * BEAT
 # When the dot walks from FROM to TO, runs up to BOUNCE, stops in front of the wordmark, and becomes its period.
 func walk() -> float: return cue(Scene.FROM_TO) + 2 * BEAT
 func run_up() -> float: return cue(Scene.BOUNCE) - 3 * BEAT
@@ -197,6 +199,14 @@ func standing(at: float, easing: int, duration := 0.5) -> Dictionary:
 		t(at + duration): {"rotation_degrees": Vector3.ZERO, "interpolation": easing},
 	}
 
+## A closing line, unseen on the page until it stands up and fades in.
+func revealed(at: float) -> TweensGdKeyframes:
+	var frames := standing(at, Out.BACK)
+	key(frames, 0, {"transparency": 1.0})
+	key(frames, at, {"transparency": 1.0})
+	key(frames, at + 0.2, {"transparency": 0.0})
+	return timeline(frames)
+
 ## Where the camera looks: the rig sits on the target and turns, and the camera backs away from it by the distance.
 ## Target and turn are relative to the scene's station, so each scene is framed as if unturned. [param at] counts
 ## seconds from the scene's cue. The camera glides into a shot unless it names another easing.
@@ -212,10 +222,10 @@ func shots() -> Array[Dictionary]:
 	# that drifts after the leaving dot. Moves take a second or more and start early, so the camera arrives as things
 	# happen. A shot with a scene is timed from its cue; after() follows the shot before it by the seconds of the move.
 	return [
-		# Up at the dot in the sky, then down to the page with it.
-		shot(Scene.OPENING, 0.0, Vector3(-2.06, 2.1, 0), Vector3(25, -4, 0), 4.4),
-		after(2.6, Vector3(-2.06, 2.15, 0), Vector3(23, 2, 0), 4.4),
-		after(1.4, Vector3(-2.06, 2.1, 0), Vector3(22, 0, 0), 4.4),
+		# Up at the credit in the sky as the dot drops out of the robot, then down to the page with it.
+		shot(Scene.OPENING, 0.0, Vector3(-1.19, 2.1, 0), Vector3(25, -4, 0), 4.4),
+		after(2.6, Vector3(-1.19, 2.15, 0), Vector3(23, 2, 0), 4.4),
+		after(1.4, Vector3(-1.19, 2.1, 0), Vector3(22, 0, 0), 4.4),
 		after(1.2, Vector3(-1.9, 0.4, 0.1), Vector3(-22, -10, 0), 4.2),
 		# FROM, the definition, and the punch line, held until its words have nearly blown away.
 		shot(Scene.FROM_TO, -0.805, Vector3(-2, 0.32, -0.45), Vector3(-14, -6, 0), 3.0),
@@ -224,7 +234,7 @@ func shots() -> Array[Dictionary]:
 		after(1.8, Vector3(-0.3, 0.1, 0.5), Vector3(-30, -4, 0), 5.0),
 		after(1.1, Vector3(-0.1, 0.1, 0.5), Vector3(-30, -2, 0), 5.0),
 		after(1.25, Vector3(-0.6, 0, 0.3), Vector3(-34, 0, 0), 3.9),
-		after(4.15, Vector3(0.4, 0.1, 0.3), Vector3(-34, 1, 0), 4.6),
+		after(3.15, Vector3(0.4, 0.1, 0.3), Vector3(-34, 1, 0), 4.6),
 		# A slow pan over to EASE and its definition as its last letter stands, and the punch line.
 		shot(Scene.EASE, 3.17, Vector3(5.6, 0, 0.4), Vector3(-30, 2, 0), 5.0),
 		after(0.9, Vector3(5.7, 0, 0.4), Vector3(-30, 2, 0), 5.0),
@@ -310,13 +320,13 @@ func float_up(piece: Node3D, i: int, n: int, at: float) -> TweensGdKeyframes:
 	var x := piece.position.x
 	var y := piece.position.y
 	var rise := at + 0.03 * i
-	var release := 5.5 + 0.04 * n
+	var release := bars(1) + 0.04 * n
 	var turn := 1 if n % 2 == 0 else -1
 	return timeline({
 		t(0): {"x": x, "y": y - 2.5, "rotation_degrees": Vector3.ZERO, "transparency": 1.0},
 		t(rise): {"y": y - 2.5, "transparency": 1.0}, t(rise + 0.4): {"transparency": 0.0},
 		t(rise + 2): {"y": y, "interpolation": Out.CUBIC},
-		t(release): {"x": x, "y": y + 0.25, "rotation_degrees": Vector3.ZERO, "transparency": 0.0},
+		t(release): {"x": x, "y": y + 0.1, "rotation_degrees": Vector3.ZERO, "transparency": 0.0},
 		t(release + 1.4): {
 			"x": x + (n % 5 - 2) * 0.3, "y": y + 1.25 + n % 3 * 0.35,
 			"rotation_degrees": Vector3(0, 0, (25 + n * 13 % 40) * turn), "transparency": 1.0, "interpolation": Out.QUAD,
@@ -430,16 +440,19 @@ func route() -> TweensGdKeyframes:
 	visit(frames, dotted(), on(5, period), Out.BACK)
 	return timeline(frames)
 
-## The disc above the carrier: it pops into the sky, drops, hops over BOUNCE, squashes and stretches, and turns into
-## the period.
+## The disc above the carrier: it drops out of the robot, falls to the page, hops over BOUNCE, squashes and stretches,
+## and turns into the period.
 func disc() -> TweensGdKeyframes:
 	var top: float = targets.cap + RADIUS
 	var period: Vector3 = targets.period
 	var hidden := Vector3.ONE * 0.01
+	var hatch: float = targets.hatch
+	var hung := hatch - RADIUS - 0.04
 	var frames := {
-		t(0): {"y": 1.6, "scale": hidden, "modulate": TWEENS_BLUE}, t(0.25): {"scale": hidden},
-		t(0.85): {"scale": Vector3.ONE, "interpolation": Out.BACK},
-		t(2.6): {"y": 1.66}, t(bars(1)): {"y": 1.6},
+		# Hidden behind the robot until it slips out of its foot.
+		t(0): {"y": hatch + RADIUS, "scale": hidden, "modulate": TWEENS_BLUE},
+		t(hatched()): {"y": hatch + RADIUS, "scale": hidden}, t(hatched() + 0.05): {"scale": Vector3(0.9, 1.12, 1)},
+		t(hatched() + 0.45): {"y": hung, "scale": Vector3.ONE, "interpolation": Out.BACK}, t(bars(1)): {"y": hung},
 		t(bars(1) + EIGHTH): {"y": RADIUS, "interpolation": In.QUAD}, t(4.67): {"y": RADIUS + 0.3, "interpolation": Out.QUAD},
 		t(bars(1) + BEAT): {"y": RADIUS, "interpolation": In.QUAD}, t(takeoff()): {"y": RADIUS},
 		t(landing(5) + EIGHTH): {"y": top + 0.5, "interpolation": Out.QUAD}, t(landing(6)): {"y": RADIUS, "interpolation": In.QUAD},

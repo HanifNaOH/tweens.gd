@@ -11,8 +11,10 @@ dotnet msbuild build/SmokeTutorial.proj
 
 Pack the addon ZIP and NuGet packages into `artifacts/packages/` before running
 `Smoke.proj` (see [the authoritative release guide](../docs-internal/RELEASING.md)).
-Smoke tests always extract fresh consumers from those artifacts. The plain Godot
-SDK fixture checks source-install
+Smoke tests always extract fresh consumers from those artifacts. The addon ZIP
+is also checked in a fresh Git repository with common directory and
+binary ignore patterns; every bundled file must remain visible to Git.
+The plain Godot SDK fixture checks source-install
 compilation; its separate 2dog host imports through `TwoDogImportGodotProject` and
 runs both languages. The NuGet fixture restores the exact local version into an
 isolated cache. Fixture props/targets block accidental repository settings.

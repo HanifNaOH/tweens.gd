@@ -9,6 +9,7 @@
     <TwoDogRemoveDuplicateGodotAnalyzers>true</TwoDogRemoveDuplicateGodotAnalyzers>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="2dog.engine" Version="$(TwoDogVersion)" />
     <PackageReference Include="2dog.xunit" Version="$(TwoDogVersion)" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.*" />
     <PackageReference Include="xunit.v3" Version="3.*" />

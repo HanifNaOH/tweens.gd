@@ -26,7 +26,8 @@ public partial class TutorialPath : Container
 
     private Control Track => shown == Language.GDScript ? GDScriptTrack : CSharpTrack;
     private float ColumnWidth => Mathf.Max(0, (Size.X - Gap) / 2);
-    private float FerretWidth => Mathf.Min(ColumnWidth * 0.62f, 300);
+    // The ferret is wider than its column; placement keeps it inside the path instead.
+    private float FerretWidth => Mathf.Min(ColumnWidth * 1.24f, 600);
     private float FerretHeight => FerretWidth * 3667 / 1332;
 
     public override Vector2 _GetMinimumSize()
@@ -61,6 +62,7 @@ public partial class TutorialPath : Container
         FitChildInRect(Track, new Rect2(trackX, 0, column, trackHeight));
 
         var x = (shown == Language.GDScript ? 0 : column + Gap) + (column - FerretWidth) / 2;
+        x = Mathf.Clamp(x, 0, Mathf.Max(0, Size.X - FerretWidth));
         FitChildInRect(Ferret, new Rect2(x, 0, FerretWidth, FerretHeight));
         // Only a language switch slides the ferret; resizing moves it at once.
         if (switching && !float.IsNaN(ferretX) && !Mathf.IsEqualApprox(ferretX, x))

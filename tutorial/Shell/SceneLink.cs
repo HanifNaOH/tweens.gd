@@ -4,8 +4,8 @@ using tweens.gd;
 namespace tutorial;
 
 /// <summary>
-/// The scene path above a lesson's stage. While a click can open the scene in the Godot editor, the pill breathes a
-/// glow and its beacon pings in time with each breath; otherwise it rests as a quiet label.
+/// The scene path above a lesson's stage. While a click can open the scene in the Godot editor, the pill fills with the
+/// accent, breathes a glow, and its beacon pings in time with each breath; otherwise it rests as a quiet label.
 /// </summary>
 [Tool, GlobalClass]
 public partial class SceneLink : CardButton
@@ -26,7 +26,7 @@ public partial class SceneLink : CardButton
     private TweenInstance? hovering;
     private TweenInstance? flashing;
     private readonly StyleBoxFlat pill = new() { AntiAliasingSize = 0.8f };
-    private readonly StyleBoxFlat glow = new() { BgColor = Colors.Transparent, ShadowSize = 14 };
+    private readonly StyleBoxFlat glow = new() { BgColor = Colors.Transparent, ShadowSize = 20 };
     private readonly StyleBoxFlat ripple = new() { DrawCenter = false, AntiAliasingSize = 0.8f };
 
     [Export]
@@ -144,10 +144,12 @@ public partial class SceneLink : CardButton
         if (GetNodeOrNull<Label>("%Caption") is not { } caption)
             return;
         caption.Text = available ? "Open in editor" : "Scene";
-        caption.AddThemeColorOverride("font_color", GetThemeColor(available ? "accent_ink" : "muted", "Tutorial"));
+        var ink = GetThemeColor(available ? "on_accent" : "muted", "Tutorial");
+        caption.AddThemeColorOverride("font_color", ink);
         var label = GetNode<Label>("%Path");
         label.Text = path;
-        label.AddThemeColorOverride("font_color", GetThemeColor(available ? "soft" : "muted", "Tutorial"));
+        label.AddThemeColorOverride("font_color", available ? ink with { A = 0.75f } : ink);
+        Normal = available ? "SceneLinkLive" : "SceneLink";
         TooltipText = available
             ? "Open this scene in the Godot editor"
             : "Run this tutorial from the Godot editor to open the scene.";
@@ -177,25 +179,26 @@ public partial class SceneLink : CardButton
         }
 
         var accent = GetThemeColor("accent", "Tutorial");
-        var low = GetThemeColor("accent_low", "Tutorial");
         var lit = Mathf.Max(breath, hover);
         glow.SetCornerRadiusAll(radius);
-        glow.ShadowColor = accent with { A = 0.1f + 0.35f * lit };
-        DrawStyleBox(glow, rect.Grow(1 + 3 * lit));
+        glow.ShadowColor = accent with { A = 0.25f + 0.4f * lit };
+        DrawStyleBox(glow, rect.Grow(2 + 4 * lit));
 
         // The ripple and the beacon's ring spread out fast and fade slowly.
         var spread = 1 - Mathf.Pow(1 - ping, 3);
         var fade = 1 - ping;
-        ripple.SetCornerRadiusAll(radius + (int)(14 * spread));
+        ripple.SetCornerRadiusAll(radius + (int)(18 * spread));
         ripple.BorderColor = accent with { A = 0.6f * fade };
-        DrawStyleBox(ripple, rect.Grow(14 * spread));
+        DrawStyleBox(ripple, rect.Grow(18 * spread));
 
-        pill.BgColor = low.Lerp(accent, 0.12f * hover + 0.35f * flash);
-        pill.BorderColor = accent with { A = 0.45f + 0.55f * lit };
+        // A solid accent pill, brightening under the pointer and on a click; the beacon takes the pill's ink.
+        var ink = GetThemeColor("on_accent", "Tutorial");
+        var text = GetThemeColor("text", "Tutorial");
+        pill.BgColor = accent.Lerp(text, 0.15f * lit + 0.1f * hover + 0.4f * flash);
+        pill.BorderColor = accent.Lerp(text, 0.3f + 0.4f * lit);
         DrawStyleBox(pill, rect);
 
-        DrawCircle(center, Beacon + 8 * spread, accent with { A = fade }, false, 1.5f, true);
-        DrawCircle(center, Beacon + 3, accent with { A = 0.25f * lit }, antialiased: true);
-        DrawCircle(center, Beacon, GetThemeColor("accent_ink", "Tutorial"), antialiased: true);
+        DrawCircle(center, Beacon + 8 * spread, ink with { A = 0.7f * fade }, false, 1.5f, true);
+        DrawCircle(center, Beacon, ink, antialiased: true);
     }
 }

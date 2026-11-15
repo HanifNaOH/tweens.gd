@@ -29,10 +29,10 @@ public sealed partial class Showreel
     // that drifts after the leaving dot. Moves take a second or more and start early, so the camera arrives as things
     // happen. A shot with a scene is timed from its cue; After follows the shot before it by the seconds of the move.
     private static readonly Shot[] Shots = [
-        // Up at the dot in the sky, then down to the page with it.
-        new(Scene.Opening, 0, (-2.06, 2.1, 0), (25, -4, 0), 4.4),
-        After(2.6, (-2.06, 2.15, 0), (23, 2, 0), 4.4),
-        After(1.4, (-2.06, 2.1, 0), (22, 0, 0), 4.4),
+        // Up at the credit in the sky as the dot drops out of the robot, then down to the page with it.
+        new(Scene.Opening, 0, (-1.19, 2.1, 0), (25, -4, 0), 4.4),
+        After(2.6, (-1.19, 2.15, 0), (23, 2, 0), 4.4),
+        After(1.4, (-1.19, 2.1, 0), (22, 0, 0), 4.4),
         After(1.2, (-1.9, 0.4, 0.1), (-22, -10, 0), 4.2),
         // FROM, the definition, and the punch line, held until its words have nearly blown away.
         new(Scene.FromTo, -0.805, (-2, 0.32, -0.45), (-14, -6, 0), 3),
@@ -41,7 +41,7 @@ public sealed partial class Showreel
         After(1.8, (-0.3, 0.1, 0.5), (-30, -4, 0), 5),
         After(1.1, (-0.1, 0.1, 0.5), (-30, -2, 0), 5),
         After(1.25, (-0.6, 0, 0.3), (-34, 0, 0), 3.9),
-        After(4.15, (0.4, 0.1, 0.3), (-34, 1, 0), 4.6),
+        After(3.15, (0.4, 0.1, 0.3), (-34, 1, 0), 4.6),
         // A slow pan over to EASE and its definition as its last letter stands, and the punch line.
         new(Scene.Ease, 3.17, (5.6, 0, 0.4), (-30, 2, 0), 5),
         After(0.9, (5.7, 0, 0.4), (-30, 2, 0), 5),
@@ -163,11 +163,11 @@ public sealed partial class Showreel
 
     private Group[] Wordmark() => [
         .. logo.Select((letter, i) => letter.Tween(Drop(i))),
-        confetti.Tween(Burst()), subtitle.Tween(Timeline(Standing(Dotted + Eighth, Out.Back))),
+        confetti.Tween(Burst()), subtitle.Tween(Revealed(Dotted + Eighth)),
     ];
 
     private Group[] Closing() => [
-        .. taglines.Select((line, i) => line.Tween(Timeline(Standing(Cue(Scene.Closing) + Eighth * i, Out.Back)))),
+        .. taglines.Select((line, i) => line.Tween(Revealed(Cue(Scene.Closing) + Eighth * i))),
     ];
 
     /// <summary>Print a definition, shorten it to a punch line, then blow it away.</summary>
@@ -204,6 +204,8 @@ public sealed partial class Showreel
     private double Takeoff => Landing(0) - Beat;
     private double Stretch(int i) => Cue(Scene.Elastic) + 3 * Beat + Eighth * i;
     private double Waypoint(int i) => Cue(Scene.Keyframes) + Beat * i;
+    // When the dot drops out of the robot and hangs under it until the next bar.
+    private static double Hatched => Bars(0) + 2 * Beat;
     // When the dot walks from FROM to TO, runs up to BOUNCE, stops in front of the wordmark, and becomes its period.
     private double Walk => Cue(Scene.FromTo) + 2 * Beat;
     private double RunUp => Cue(Scene.Bounce) - 3 * Beat;
@@ -218,6 +220,11 @@ public sealed partial class Showreel
         Key.At(0, rotationDegrees: (-90, 0, 0)), Key.At(T(at), rotationDegrees: (-90, 0, 0)),
         Key.At(T(at + seconds), rotationDegrees: (0, 0, 0), interpolation: ease),
     ];
+
+    /// <summary>A closing line, unseen on the page until it stands up and fades in.</summary>
+    private Tweens.Keyframes Revealed(double at) => Timeline([
+        .. Standing(at, Out.Back), Key.At(0, transparency: 1), Key.At(T(at), transparency: 1), Key.At(T(at + 0.2), transparency: 0),
+    ]);
 
     /// <summary>Where the camera looks: the rig sits on the target and turns, and the camera backs away from it by the
     /// distance. Target and turn are relative to the scene's station, so each scene is framed as if unturned. At counts
@@ -286,13 +293,13 @@ public sealed partial class Showreel
     {
         var (x, y) = (piece.Position.X, piece.Position.Y);
         var rise = at + 0.03 * i;
-        var release = 5.5 + 0.04 * n;
+        var release = Bars(1) + 0.04 * n;
         var turn = n % 2 == 0 ? 1 : -1;
         return Timeline([
             Key.At(0, x: x, y: y - 2.5, rotationDegrees: (0, 0, 0), transparency: 1),
             Key.At(T(rise), y: y - 2.5, transparency: 1), Key.At(T(rise + 0.4), transparency: 0),
             Key.At(T(rise + 2), y: y, interpolation: Out.Cubic),
-            Key.At(T(release), x: x, y: y + 0.25, rotationDegrees: (0, 0, 0), transparency: 0),
+            Key.At(T(release), x: x, y: y + 0.1, rotationDegrees: (0, 0, 0), transparency: 0),
             Key.At(T(release + 1.4), x: x + (n % 5 - 2) * 0.3, y: y + 1.25 + n % 3 * 0.35,
                 rotationDegrees: (0, 0, (25 + n * 13 % 40) * turn), transparency: 1, interpolation: Out.Quad),
         ]);
@@ -400,15 +407,16 @@ public sealed partial class Showreel
         return Timeline(keys);
     }
 
-    /// <summary>The disc above the carrier: it pops into the sky, drops, hops over BOUNCE, squashes and stretches, and
-    /// turns into the period.</summary>
+    /// <summary>The disc above the carrier: it drops out of the robot, falls to the page, hops over BOUNCE, squashes
+    /// and stretches, and turns into the period.</summary>
     private Tweens.Keyframes Disc()
     {
-        var top = cap + Radius;
+        var (top, hung) = (cap + Radius, hatch - Radius - 0.04f);
         List<Key> keys = [
-            Key.At(0, y: 1.6, scale: (0.01, 0.01, 0.01), modulate: TweensBlue), Key.At(T(0.25), scale: (0.01, 0.01, 0.01)),
-            Key.At(T(0.85), scale: (1, 1, 1), interpolation: Out.Back),
-            Key.At(T(2.6), y: 1.66), Key.At(T(Bars(1)), y: 1.6),
+            // Hidden behind the robot until it slips out of its foot.
+            Key.At(0, y: hatch + Radius, scale: (0.01, 0.01, 0.01), modulate: TweensBlue),
+            Key.At(T(Hatched), y: hatch + Radius, scale: (0.01, 0.01, 0.01)), Key.At(T(Hatched + 0.05), scale: (0.9, 1.12, 1)),
+            Key.At(T(Hatched + 0.45), y: hung, scale: (1, 1, 1), interpolation: Out.Back), Key.At(T(Bars(1)), y: hung),
             Key.At(T(Bars(1) + Eighth), y: Radius, interpolation: In.Quad), Key.At(T(4.67), y: Radius + 0.3, interpolation: Out.Quad),
             Key.At(T(Bars(1) + Beat), y: Radius, interpolation: In.Quad), Key.At(T(Takeoff), y: Radius),
             Key.At(T(Landing(5) + Eighth), y: top + 0.5, interpolation: Out.Quad), Key.At(T(Landing(6)), y: Radius, interpolation: In.Quad),

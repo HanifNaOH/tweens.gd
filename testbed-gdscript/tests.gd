@@ -771,6 +771,24 @@ func _interpolation() -> bool:
 	var wide_interpolated: bool = wide.completion_reason != T.Reason.FAILED and wide.value == Vector2(0.0, 1.0)
 	check(wide_interpolated, "vector components near opposite float limits interpolate")
 	wide.cancel()
+	var endpoint_data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://conformance/endpoints.json"))
+	var limits: Dictionary = endpoint_data.wide_interpolation
+	var component: float = limits.float
+	var scalar: float = limits.double
+	for weight: float in limits.weights:
+		var expected := 2.0 * weight - 1.0
+		for limit: float in [component, scalar]:
+			var actual: float = TweensGdInterpolation.interpolate(-limit, limit, weight, TYPE_FLOAT)
+			near(actual / limit, expected, "wide scalar interpolation")
+		var v2: Vector2 = TweensGdInterpolation.interpolate(Vector2(-component, 1), Vector2(component, 1), weight, TYPE_VECTOR2)
+		check((v2 / Vector2(component, 1)).is_equal_approx(Vector2(expected, 1)), "wide Vector2 interpolation")
+		var v3: Vector3 = TweensGdInterpolation.interpolate(Vector3(-component, 1, -component), Vector3(component, 1, component), weight, TYPE_VECTOR3)
+		check((v3 / Vector3(component, 1, component)).is_equal_approx(Vector3(expected, 1, expected)), "wide Vector3 interpolation")
+		var v4: Vector4 = TweensGdInterpolation.interpolate(Vector4(-component, 1, -component, 1), Vector4(component, 1, component, 1), weight, TYPE_VECTOR4)
+		check((v4 / Vector4(component, 1, component, 1)).is_equal_approx(Vector4(expected, 1, expected, 1)), "wide Vector4 interpolation")
+		var rect: Rect2 = TweensGdInterpolation.interpolate(Rect2(-component, 1, -component, 1), Rect2(component, 1, component, 1), weight, TYPE_RECT2)
+		check((rect.position / Vector2(component, 1)).is_equal_approx(Vector2(expected, 1)), "wide Rect2 position interpolation")
+		check((rect.size / Vector2(component, 1)).is_equal_approx(Vector2(expected, 1)), "wide Rect2 size interpolation")
 	var rotation := scheduler.add(target, T.value(Quaternion.IDENTITY, -Quaternion(Vector3.UP, PI / 2.0), 1.0))
 	scheduler.update(0.5)
 	var rotation_value: Quaternion = rotation.value

@@ -5,10 +5,11 @@ reusing a definition, syntax and sugar, and awaiting completion. Choose C# or GD
 step runs its lesson in the chosen language and shows the code that runs.
 
 GitHub releases also include `tweens.gd-tutorial.zip`: a standalone Godot .NET
-project with the complete addon, scenes, scripts, and assets included. Extract it,
-import `project.godot` in Godot .NET 4.7.2, build with the .NET 8 SDK or later, and
-press F5. The archive needs no 2dog tools or repository checkout. Its bundled
-[README](../scripts/templates/tutorial/README.md) describes opening the project;
+project with the complete addon, scenes, scripts, and assets included. In Godot
+.NET 4.7.2's Project Manager, click **Import**, select the ZIP directly, and choose
+an empty destination folder. Godot extracts and opens the project. Build with the
+.NET 8 SDK or later, and press F5. The archive needs no 2dog tools or repository
+checkout. Its bundled [README](../scripts/templates/tutorial/README.md) describes opening the project;
 release procedures live in [the release guide](../docs-internal/RELEASING.md).
 
 ## Layout

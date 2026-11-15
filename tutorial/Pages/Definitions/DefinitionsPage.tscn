@@ -87,7 +87,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "A tween definition is a motion you can re-use on any compatible Node."
+Markdown = "A definition is a motion you can start on any compatible node, as often as you like."
 
 [node name="SceneLink" parent="Scroll/Margin/Column/Content" instance=ExtResource("scene_link")]
 
@@ -220,7 +220,7 @@ theme_override_styles/grabber_area_highlight = SubResource("StyleBoxFlat_Stagger
 [node name="Note" type="Label" parent="Scroll/Margin/Column/Content/Demo/Margin/Layout"]
 layout_mode = 2
 theme_type_variation = &"CaptionLabel"
-text = "Changes apply to the next wave. Icons in the air keep the settings they started with."
+text = "Changes apply from the next wave. Each start snapshots its definition, so icons in the air keep theirs."
 autowrap_mode = 3
 
 [node name="SectionGap" type="Control" parent="Scroll/Margin/Column/Content"]
@@ -279,7 +279,7 @@ scroll_active = false
 autowrap_mode = 3
 size_flags_horizontal = 3
 script = ExtResource("5_prose")
-Markdown = "**Define once.** `hop` lifts a node 80 pixels and drops it back; negative y is up in Godot. `By` is relative, so each icon hops from wherever it stands."
+Markdown = "**Define once.** `hop` lifts a node 80 pixels (negative y is up) and drops it back. `By` is relative, so each icon hops from where it stands."
 
 [node name="Note2" type="HBoxContainer" parent="Scroll/Margin/Column/Content/Moves/CSharpNotes"]
 layout_mode = 2
@@ -325,7 +325,7 @@ scroll_active = false
 autowrap_mode = 3
 size_flags_horizontal = 3
 script = ExtResource("5_prose")
-Markdown = "**Start a copy on each.** `with` copies `hop` and changes only `Delay`, so `hop` itself keeps no delay. Each start returns its own handle."
+Markdown = "**Start a copy on each.** `with` copies `hop` with a new `Delay`; `hop` itself stays unchanged."
 
 [node name="Note4" type="HBoxContainer" parent="Scroll/Margin/Column/Content/Moves/CSharpNotes"]
 layout_mode = 2
@@ -376,7 +376,7 @@ scroll_active = false
 autowrap_mode = 3
 size_flags_horizontal = 3
 script = ExtResource("5_prose")
-Markdown = "**Define once.** `hop` lifts a node 80 pixels and drops it back; negative y is up in Godot. `by_value` is relative, so each icon hops from wherever it stands."
+Markdown = "**Define once.** `hop` lifts a node 80 pixels (negative y is up) and drops it back. `by_value` is relative, so each icon hops from where it stands."
 
 [node name="Note2" type="HBoxContainer" parent="Scroll/Margin/Column/Content/Moves/GDScriptNotes"]
 layout_mode = 2
@@ -422,7 +422,7 @@ scroll_active = false
 autowrap_mode = 3
 size_flags_horizontal = 3
 script = ExtResource("5_prose")
-Markdown = "**Start a copy on each.** `with_delay()` copies `hop` with a new delay, so `hop` itself keeps none. Each start returns its own handle."
+Markdown = "**Start a copy on each.** `with_delay()` copies `hop` with a new delay; `hop` itself stays unchanged."
 
 [node name="Note4" type="HBoxContainer" parent="Scroll/Margin/Column/Content/Moves/GDScriptNotes"]
 layout_mode = 2
@@ -446,35 +446,6 @@ autowrap_mode = 3
 size_flags_horizontal = 3
 script = ExtResource("5_prose")
 Markdown = "**Tune it.** The sliders above set `height` and `stagger`, as the Inspector would."
-
-[node name="SceneCSharp" type="RichTextLabel" parent="Scroll/Margin/Column/Content" groups=["csharp"]]
-layout_mode = 2
-theme_type_variation = &"SmallProse"
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-autowrap_mode = 3
-script = ExtResource("5_prose")
-Markdown = "This project's copy is `Lessons/Definitions/HopWave.tscn`: open it and press F6."
-
-[node name="SceneGDScript" type="RichTextLabel" parent="Scroll/Margin/Column/Content" groups=["gdscript"]]
-layout_mode = 2
-theme_type_variation = &"SmallProse"
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-autowrap_mode = 3
-script = ExtResource("5_prose")
-Markdown = "This project's copy is `Lessons/Definitions/hop_wave.tscn`: open it and press F6."
-
-[node name="Snapshot" type="RichTextLabel" parent="Scroll/Margin/Column/Content"]
-layout_mode = 2
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-autowrap_mode = 3
-script = ExtResource("5_prose")
-Markdown = "Each start snapshots its definition. Change `hop` later, and only the starts after that follow; tweens already playing keep their settings."
 
 [node name="MoreGap" type="Control" parent="Scroll/Margin/Column/Content"]
 custom_minimum_size = Vector2(0, 4)
@@ -522,7 +493,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "Store a shared definition in a `static readonly` field of a class you can use as your animation design system (or theme), shared across your project. The generated definitions are readonly record structs."
+Markdown = "Put shared definitions in `static readonly` fields of one class, a motion theme for your whole project. Definitions are readonly record structs, so a shared one never changes."
 
 [node name="KeepGDScript" type="PanelContainer" parent="Scroll/Margin/Column/Content" groups=["gdscript"]]
 layout_mode = 2
@@ -544,7 +515,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "Store a shared definition in a `static var` in a class you can use as your animation design system (or theme), shared across your project. Treat it as read-only and use `with_*()` copies for individual starts."
+Markdown = "Put shared definitions in `static var`s of one class, a motion theme for your whole project. Treat them as read-only and start `with_*()` copies."
 
 [node name="FooterGap" type="Control" parent="Scroll/Margin/Column/Content"]
 custom_minimum_size = Vector2(0, 16)

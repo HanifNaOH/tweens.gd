@@ -24,15 +24,26 @@ public static class Interpolators
     }
 
     /// <summary>Linear Float interpolation. Weight may overshoot [0, 1].</summary>
-    public static float Float(float from, float to, float weight) => from + (to - from) * weight;
+    public static float Float(float from, float to, float weight)
+    {
+        var difference = to - from;
+        return float.IsFinite(difference) ? from + difference * weight : from * (1 - weight) + to * weight;
+    }
     /// <summary>Linear Double interpolation. Weight may overshoot [0, 1].</summary>
-    public static double Double(double from, double to, float weight) => from + (to - from) * weight;
+    public static double Double(double from, double to, float weight)
+    {
+        var difference = to - from;
+        return double.IsFinite(difference) ? from + difference * weight : from * (1 - (double)weight) + to * weight;
+    }
     /// <summary>Linear Vector2 interpolation. Weight may overshoot [0, 1].</summary>
-    public static Vector2 Vector2(Vector2 from, Vector2 to, float weight) => from.Lerp(to, weight);
+    public static Vector2 Vector2(Vector2 from, Vector2 to, float weight)
+        => new(Float(from.X, to.X, weight), Float(from.Y, to.Y, weight));
     /// <summary>Linear Vector3 interpolation. Weight may overshoot [0, 1].</summary>
-    public static Vector3 Vector3(Vector3 from, Vector3 to, float weight) => from.Lerp(to, weight);
+    public static Vector3 Vector3(Vector3 from, Vector3 to, float weight)
+        => new(Float(from.X, to.X, weight), Float(from.Y, to.Y, weight), Float(from.Z, to.Z, weight));
     /// <summary>Linear Vector4 interpolation. Weight may overshoot [0, 1].</summary>
-    public static Vector4 Vector4(Vector4 from, Vector4 to, float weight) => from.Lerp(to, weight);
+    public static Vector4 Vector4(Vector4 from, Vector4 to, float weight)
+        => new(Float(from.X, to.X, weight), Float(from.Y, to.Y, weight), Float(from.Z, to.Z, weight), Float(from.W, to.W, weight));
     /// <summary>Interpolates ordinary Godot colors in premultiplied OKLab. Weight may overshoot [0, 1].</summary>
     public static Color Color(Color from, Color to, float weight) => Color(from, to, weight,
         ColorSpace.Oklab, AlphaMode.Premultiplied, ColorEncoding.Srgb);
@@ -49,7 +60,7 @@ public static class Interpolators
     }
     /// <summary>Linear Rect2 interpolation. Weight may overshoot [0, 1].</summary>
     public static Rect2 Rect2(Rect2 from, Rect2 to, float weight)
-        => new(from.Position.Lerp(to.Position, weight), from.Size.Lerp(to.Size, weight));
+        => new(Vector2(from.Position, to.Position, weight), Vector2(from.Size, to.Size, weight));
     /// <summary>Spherical quaternion interpolation. Weight may overshoot [0, 1].</summary>
     public static Quaternion Quaternion(Quaternion from, Quaternion to, float weight)
     {

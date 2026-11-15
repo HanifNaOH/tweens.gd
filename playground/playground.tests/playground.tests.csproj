@@ -9,9 +9,10 @@
         <RootNamespace>playground.Tests</RootNamespace>
     </PropertyGroup>
 
-    <!-- 2dog packages (2dog.xunit pulls in 2dog.engine for the fixtures and ships the xUnit
-         collection definitions as compile-in source) -->
+    <!-- 2dog packages (2dog.engine provides the fixtures; 2dog.xunit ships the xUnit collection definitions as
+         compile-in source) -->
     <ItemGroup>
+        <PackageReference Include="2dog.engine" Version="$(TwoDogVersion)"/>
         <PackageReference Include="2dog.xunit" Version="$(TwoDogVersion)"/>
     </ItemGroup>
 

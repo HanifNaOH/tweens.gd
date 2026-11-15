@@ -8,8 +8,9 @@
         <RootNamespace>tweens.gd.Tests</RootNamespace>
     </PropertyGroup>
 
-    <!-- 2dog.xunit brings 2dog.engine and compiles its xUnit collection definitions into this assembly. -->
+    <!-- 2dog.engine provides the fixtures; 2dog.xunit compiles its xUnit collection definitions into this assembly. -->
     <ItemGroup>
+        <PackageReference Include="2dog.engine" Version="$(TwoDogVersion)" />
         <PackageReference Include="2dog.xunit" Version="$(TwoDogVersion)" />
     </ItemGroup>
 

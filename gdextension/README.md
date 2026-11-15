@@ -26,7 +26,9 @@ filenames, and builds write those files to `addons/tweens_gd/bin/`.
 CI (`.github/workflows/gdextension.yml`) builds Windows x86_64/x86_32/arm64,
 Linux x86_64/x86_32/arm64, macOS universal, iOS arm64, Android
 arm64/arm32/x86_64/x86_32 and Web wasm32 with and without threads, then runs the
-GDScript suite on Linux and macOS.
+GDScript suite on Linux and macOS. Branch pushes reuse a cached build when the
+sources in `gdextension/`, the godot-cpp commit and the workflow are unchanged,
+and then test on Linux only; releases and manual runs always build.
 
 `build_profile.json` limits the generated bindings to the engine classes the
 sources use. Add a class there when the code starts using a new one.

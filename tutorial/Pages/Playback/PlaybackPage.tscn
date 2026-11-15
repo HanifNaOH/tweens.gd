@@ -73,7 +73,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "Every start returns a handle. Await it to continue once the tween ends, or use it to pause and cancel the tween on the way."
+Markdown = "Every start returns a handle. Await it, or pause and cancel the tween with it."
 
 [node name="SceneLink" parent="Scroll/Margin/Column/Content" instance=ExtResource("scene_link")]
 
@@ -200,7 +200,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "The remote's buttons call this script's methods. To build your own, attach it to a scene's root `Node2D`, pick a `Sprite2D` for **Sprite** in the Inspector, and connect each button's `pressed` signal to its method."
+Markdown = "The buttons above call this script's methods. To build your own, attach it to a root `Node2D`, pick a `Sprite2D` for **Sprite**, and connect each button's `pressed` signal to its method."
 
 [node name="InstructionsGDScript" type="RichTextLabel" parent="Scroll/Margin/Column/Content" groups=["gdscript"]]
 layout_mode = 2
@@ -209,7 +209,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "The remote's buttons call this script's functions. To build your own, attach it to a scene's root `Node2D`, pick a `Sprite2D` for **Sprite** in the Inspector, and connect each button's `pressed` signal to its function."
+Markdown = "The buttons above call this script's functions. To build your own, attach it to a root `Node2D`, pick a `Sprite2D` for **Sprite**, and connect each button's `pressed` signal to its function."
 
 [node name="Moves" type="Container" parent="Scroll/Margin/Column/Content"]
 layout_mode = 2
@@ -370,26 +370,6 @@ size_flags_horizontal = 3
 script = ExtResource("5_prose")
 Markdown = "**Control it.** `pause()` holds the current value until `resume()`. `cancel()` stops for good and keeps the latest value."
 
-[node name="SceneCSharp" type="RichTextLabel" parent="Scroll/Margin/Column/Content" groups=["csharp"]]
-layout_mode = 2
-theme_type_variation = &"SmallProse"
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-autowrap_mode = 3
-script = ExtResource("5_prose")
-Markdown = "This project's copy is `Lessons/Playback/PlaybackRemote.tscn`."
-
-[node name="SceneGDScript" type="RichTextLabel" parent="Scroll/Margin/Column/Content" groups=["gdscript"]]
-layout_mode = 2
-theme_type_variation = &"SmallProse"
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-autowrap_mode = 3
-script = ExtResource("5_prose")
-Markdown = "This project's copy is `Lessons/Playback/playback_remote.tscn`."
-
 [node name="CancelCSharp" type="RichTextLabel" parent="Scroll/Margin/Column/Content" groups=["csharp"]]
 layout_mode = 2
 bbcode_enabled = true
@@ -397,7 +377,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "To stop every tween a node owns without keeping their handles, call `sprite.CancelTweens()`."
+Markdown = "Without handles, `sprite.CancelTweens()` stops every tween the node owns."
 
 [node name="CancelGDScript" type="RichTextLabel" parent="Scroll/Margin/Column/Content" groups=["gdscript"]]
 layout_mode = 2
@@ -406,7 +386,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "To stop every tween a node owns without keeping their handles, call `Tweens.cancel_tweens(sprite)`."
+Markdown = "Without handles, `Tweens.cancel_tweens(sprite)` stops every tween the node owns."
 
 [node name="ReactGap" type="Control" parent="Scroll/Margin/Column/Content"]
 custom_minimum_size = Vector2(0, 8)
@@ -433,7 +413,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "Await the handle to continue in the same method. `End` resumes however playback ended, so check the reason when the next step needs an arrival."
+Markdown = "`End` resumes however playback ended, so check the reason when the next step needs an arrival."
 
 [node name="AboveGDScript" type="RichTextLabel" parent="Scroll/Margin/Column/Content/Compare/Left" groups=["gdscript"]]
 layout_mode = 2
@@ -442,7 +422,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "Await the handle to continue in the same function. `end` resumes however playback ended, so check the reason when the next step needs an arrival."
+Markdown = "`end` resumes however playback ended, so check the reason when the next step needs an arrival."
 
 [node name="Await" parent="Scroll/Margin/Column/Content/Compare/Left" instance=ExtResource("6_codeview")]
 layout_mode = 2
@@ -464,7 +444,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "A callback on the definition suits a small synchronous reaction. `OnEnd` runs only on natural completion."
+Markdown = "For a small reaction, a callback on the definition will do. `OnEnd` runs only on natural completion."
 
 [node name="AboveGDScript" type="RichTextLabel" parent="Scroll/Margin/Column/Content/Compare/Right" groups=["gdscript"]]
 layout_mode = 2
@@ -473,7 +453,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "A callback on the definition suits a small synchronous reaction. `on_end` runs only on natural completion."
+Markdown = "For a small reaction, a callback on the definition will do. `on_end` runs only on natural completion."
 
 [node name="Callbacks" parent="Scroll/Margin/Column/Content/Compare/Right" instance=ExtResource("6_codeview")]
 layout_mode = 2
@@ -522,7 +502,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "An exception in an ease, setter, or callback faults playback, and awaiting `End` throws it. Catch it in `async void` methods such as `_Ready`. Create, control, and await tweens on the main thread, and never block on `End` with `.Wait()` or `.Result`."
+Markdown = "An exception in an ease, setter, or callback faults playback, and awaiting `End` throws it; catch it in `async void` methods such as `_Ready`. Never block on `End` with `.Wait()` or `.Result`."
 
 [node name="AwaitProperty" type="PanelContainer" parent="Scroll/Margin/Column/Content" groups=["gdscript"]]
 layout_mode = 2

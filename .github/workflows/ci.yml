@@ -18,15 +18,23 @@ on:
 permissions:
   contents: read
 
+# A new push supersedes a branch's running checks; release runs always finish.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' && github.ref_type == 'branch' }}
+
 jobs:
   # Ignore the root README; library jobs run for other changes outside docs/.
   # The docs job also checks shared JavaScript utilities.
-  # Manual runs, release tags, new branches, and history the diff can't reach run everything.
+  # Manual runs, release tags, branches without a passing run, and rewritten history run everything.
   changes:
     if: github.repository == 'outfox/tweens.gd'
     name: Detect changes
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
     outputs:
       library: ${{ steps.classify.outputs.library }}
       docs: ${{ steps.classify.outputs.docs }}
@@ -41,15 +49,17 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           REF_TYPE: ${{ github.ref_type }}
-          PR_BASE: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD: ${{ github.event.pull_request.head.sha }}
-          PUSH_BASE: ${{ github.event.before }}
+          BRANCH: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
         run: |
+          # Diff against the branch's last passing commit: changes from failed or cancelled runs still need checks.
           range=
-          if [[ $EVENT == pull_request ]]; then
-            range="$PR_BASE...$PR_HEAD"
-          elif [[ $EVENT == push && $REF_TYPE == branch && -n $PUSH_BASE && ! $PUSH_BASE =~ ^0+$ ]]; then
-            range="$PUSH_BASE...$GITHUB_SHA"
+          if [[ $EVENT == push && $REF_TYPE == branch ]]; then
+            base=$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" -f branch="$BRANCH" \
+              -f status=success -f per_page=1 --jq '.workflow_runs[0].head_sha // empty') || base=
+            if [[ -n $base && $base != "$GITHUB_SHA" ]] && git merge-base --is-ancestor "$base" "$GITHUB_SHA"; then
+              range="$base..$GITHUB_SHA"
+            fi
           fi
           library=true
           docs=true
@@ -75,6 +85,8 @@ jobs:
     needs: changes
     if: github.repository == 'outfox/tweens.gd' && (needs.changes.outputs.library == 'true')
     uses: ./.github/workflows/gdextension.yml
+    with:
+      rebuild: ${{ github.event_name != 'push' || github.ref_type != 'branch' }}
 
   build:
     if: github.repository == 'outfox/tweens.gd'
@@ -115,16 +127,30 @@ jobs:
         run: dotnet restore tweens.gd.slnx -p:Configuration=Release
       - name: Check release failure handling
         run: ./.github/scripts/Test-ReleasePublishing.ps1
+      # Import separately: the import script retries only Godot's native import crash.
       - name: Build
-        run: dotnet build tweens.gd.slnx -c Release --no-restore -p:ContinuousIntegrationBuild=true -p:Version=$env:PACKAGE_VERSION
+        run: dotnet build tweens.gd.slnx -c Release --no-restore -p:ContinuousIntegrationBuild=true -p:Version=$env:PACKAGE_VERSION -p:TwoDogAutoImport=false
+      - name: Import Godot projects
+        run: |
+          foreach ($project in 'testbed/testbed.tests/testbed.tests.csproj', 'tests/tweens.gd.tests/tweens.gd.tests.csproj', 'testbed-gdscript/host/gdscript.2dog.csproj') {
+            ./scripts/Import-GodotProject.ps1 -Project $project -Property Configuration=Release
+          }
       - name: Build library lifecycle tests
         run: dotnet build tests/tweens.gd.tests/tweens.gd.tests.csproj -c Release --no-restore -p:TestSuite=Lifecycle -p:ContinuousIntegrationBuild=true -p:Version=$env:PACKAGE_VERSION
       - name: Test
         run: dotnet test testbed/testbed.tests/testbed.tests.csproj -c Release --no-build --no-restore --logger 'trx;LogFileName=tests.trx' --results-directory artifacts/test-results
+      - name: Build playground tests
+        run: dotnet build playground/playground.tests/playground.tests.csproj -c Release -p:TwoDogAutoImport=false
+      - name: Import playground project
+        run: ./scripts/Import-GodotProject.ps1 -Project playground/playground.tests/playground.tests.csproj -Property Configuration=Release
       - name: Test playground
-        run: dotnet test playground/playground.tests/playground.tests.csproj -c Release --logger 'trx;LogFileName=playground.trx' --results-directory artifacts/test-results
+        run: dotnet test playground/playground.tests/playground.tests.csproj -c Release --no-build --logger 'trx;LogFileName=playground.trx' --results-directory artifacts/test-results
+      - name: Build tutorial tests
+        run: dotnet build tutorial/tutorial.tests/tutorial.tests.csproj -c Release -p:TwoDogAutoImport=false
+      - name: Import tutorial project
+        run: ./scripts/Import-GodotProject.ps1 -Project tutorial/tutorial.tests/tutorial.tests.csproj -Property Configuration=Release
       - name: Test tutorial
-        run: dotnet test tutorial/tutorial.tests/tutorial.tests.csproj -c Release --logger 'trx;LogFileName=tutorial.trx' --results-directory artifacts/test-results
+        run: dotnet test tutorial/tutorial.tests/tutorial.tests.csproj -c Release --no-build --logger 'trx;LogFileName=tutorial.trx' --results-directory artifacts/test-results
       - name: Test library with coverage
         run: dotnet msbuild build/Coverage.proj -p:Configuration=Release -p:NoBuild=true
       # Godot 4.7 projects target net8.0 and roll forward; run the library's net8.0 build on .NET 10 the same way.
@@ -222,25 +248,44 @@ jobs:
           icds=(/usr/share/vulkan/icd.d/lvp_icd*.json)
           if [ ${#icds[@]} -ne 1 ] || [ ! -f "${icds[0]}" ]; then echo "Expected one lavapipe ICD: ${icds[*]}"; exit 1; fi
           echo "VK_DRIVER_FILES=${icds[0]}" >> "$GITHUB_ENV"
+      # Import separately: the import script retries only Godot's native import crash.
+      - name: Build rendering tests
+        run: |
+          dotnet build tests/tweens.gd.tests/tweens.gd.tests.csproj -c Release -p:TestSuite=Rendering -p:TwoDogAutoImport=false
+          dotnet build testbed/testbed.tests/testbed.tests.csproj -c Release -p:RenderingTests=true -p:TwoDogAutoImport=false
+          dotnet build playground/playground.tests/playground.tests.csproj -c Release -p:RenderingTests=true -p:TwoDogAutoImport=false
+      - name: Import Godot projects
+        shell: pwsh
+        run: |
+          ./scripts/Import-GodotProject.ps1 -Project tests/tweens.gd.tests/tweens.gd.tests.csproj -Property Configuration=Release, TestSuite=Rendering
+          ./scripts/Import-GodotProject.ps1 -Project testbed/testbed.tests/testbed.tests.csproj -Property Configuration=Release, RenderingTests=true
+          ./scripts/Import-GodotProject.ps1 -Project playground/playground.tests/playground.tests.csproj -Property Configuration=Release, RenderingTests=true
       - name: Test library rendering
         run: >-
           xvfb-run -a -s '-screen 0 1920x1080x24'
-          dotnet test tests/tweens.gd.tests/tweens.gd.tests.csproj -c Release -p:TestSuite=Rendering --blame-hang-timeout 2m
+          dotnet test tests/tweens.gd.tests/tweens.gd.tests.csproj -c Release -p:TestSuite=Rendering --no-build --blame-hang-timeout 2m
           --logger 'trx;LogFileName=library-rendering.trx' --results-directory artifacts/test-results
       - name: Test testbed rendering
         run: >-
           xvfb-run -a -s '-screen 0 1920x1080x24'
-          dotnet test testbed/testbed.tests/testbed.tests.csproj -c Release -p:RenderingTests=true --blame-hang-timeout 2m
+          dotnet test testbed/testbed.tests/testbed.tests.csproj -c Release -p:RenderingTests=true --no-build --blame-hang-timeout 2m
           --logger 'trx;LogFileName=testbed-rendering.trx' --results-directory artifacts/test-results
       - name: Test playground rendering
         run: >-
           xvfb-run -a -s '-screen 0 1920x1080x24'
-          dotnet test playground/playground.tests/playground.tests.csproj -c Release -p:RenderingTests=true --blame-hang-timeout 2m
+          dotnet test playground/playground.tests/playground.tests.csproj -c Release -p:RenderingTests=true --no-build --blame-hang-timeout 2m
           --logger 'trx;LogFileName=playground-rendering.trx' --results-directory artifacts/test-results
+      - name: Build tutorial rendering tests
+        run: dotnet build tutorial/tutorial.tests/tutorial.tests.csproj -c Release -p:RenderingTests=true -p:TwoDogAutoImport=false
+      - name: Import tutorial project
+        shell: pwsh
+        run: >-
+          ./scripts/Import-GodotProject.ps1 -Project tutorial/tutorial.tests/tutorial.tests.csproj
+          -Property Configuration=Release, RenderingTests=true
       - name: Test tutorial rendering
         run: >-
           xvfb-run -a -s '-screen 0 1920x1080x24'
-          dotnet test tutorial/tutorial.tests/tutorial.tests.csproj -c Release -p:RenderingTests=true --blame-hang-timeout 2m
+          dotnet test tutorial/tutorial.tests/tutorial.tests.csproj -c Release -p:RenderingTests=true --no-build --blame-hang-timeout 2m
           --logger 'trx;LogFileName=tutorial-rendering.trx' --results-directory artifacts/test-results
       - name: Upload test results
         if: always()

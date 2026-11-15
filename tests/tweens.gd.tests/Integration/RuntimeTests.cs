@@ -215,6 +215,21 @@ public class RuntimeTests(HeadlessFixture godot)
     }
 
     [Fact]
+    public void CancelDescendantsAllowsCallbacksToFreeTheOwner()
+    {
+        using var scope = new SceneScope(godot);
+        var parent = scope.Add(new Node2D());
+        var other = scope.Add(new Node2D());
+        var own = parent.TweenPositionX(10, 10, d => d.OnCancel = _ => parent.Free());
+        var unrelated = other.TweenPositionX(10, 10);
+        scope.Advance(0);
+        parent.CancelTweens(includeChildren: true);
+        Assert.Equal(Reason.Cancelled, own.CompletionReason);
+        Assert.True(own.IsSettled);
+        Assert.False(unrelated.IsTerminal);
+    }
+
+    [Fact]
     public void OwnersMustBeLiveNodesInTheTree()
     {
         using var scope = new SceneScope(godot);

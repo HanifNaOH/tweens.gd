@@ -153,6 +153,44 @@ public class SchedulerTests
         Assert.Equal(0, scheduler.ActiveCount);
     }
 
+    private sealed class CopyProbe : TweenBinding<Box, float>
+    {
+        public Action? OnCopy;
+        public override TweenBinding<Box, float> Copy() { OnCopy?.Invoke(); return this; }
+        protected override float Read(Box target) => target.Value;
+        protected override void Write(Box target, float value) => target.Value = value;
+    }
+
+    [Theory]
+    [InlineData("single")]
+    [InlineData("sampled")]
+    [InlineData("group")]
+    [InlineData("chain")]
+    public void DisposalDuringBindingCopyRejectsEveryStartPath(string start)
+    {
+        using var scheduler = new TweenScheduler();
+        var binding = new CopyProbe();
+        var definition = new PropertyTween<Box, float>(binding, Interpolators.Float) { To = 1, Duration = 1 };
+        var sampled = new Tweens.Sampled<Box, float>(binding, KeyframeCurve<float>.EvenlySpaced([0, 1]));
+        binding.OnCopy = scheduler.Dispose;
+        var existing = scheduler.Add(new Box(), new PlainTween { Duration = 1 });
+        Assert.Throws<ObjectDisposedException>(() =>
+        {
+            switch (start)
+            {
+                case "single": scheduler.Add(new Box(), definition); break;
+                case "sampled": scheduler.Add(new Box(), sampled); break;
+                case "group": scheduler.AddAll(new Box(), [new PlainTween(), definition]); break;
+                case "chain": scheduler.AddChain(new Box(), [new PlainTween(), definition]); break;
+            }
+        });
+        Assert.Equal(Reason.RunnerDisposed, existing.CompletionReason);
+        Assert.True(existing.End.IsCompletedSuccessfully);
+        Assert.Equal(0, scheduler.ActiveCount);
+        scheduler.Dispose();
+        Assert.Equal(0, scheduler.ActiveCount);
+    }
+
     [Fact]
     public void DisposalDuringUpdateStopsTheUpdate()
     {

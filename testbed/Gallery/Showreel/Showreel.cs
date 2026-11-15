@@ -36,7 +36,8 @@ public sealed partial class Showreel : GalleryEffect
     private (Label3D[] Words, Label3D[] Extra)[] glosses = [];
     // Where the disc settles as the wordmark's period, its scale there, and the scale of its rim relative to it.
     private Vector3 period, periodScale, rimScale;
-    private float cap;
+    // The height of BOUNCE's cap tops, and of the robot's foot that the disc drops out of.
+    private float cap, hatch;
     private ColorRect fade = null!;
 
     public override string Title => "Showreel";
@@ -81,6 +82,7 @@ public sealed partial class Showreel : GalleryEffect
         fade = Get<ColorRect>("Fade");
 
         cap = CapHeight * Get<Lettering>("Bounce").FontSize * Lettering.Pixel;
+        hatch = Page(Get<Node3D>("Hatch")).Y;
         // The disc takes the period's place and size. Between the letters' fills and their shades, its rim shows as their
         // outlines do; Label3D draws MSDF outlines in MSDF texels, of which the font has msdf_size per em.
         period = Page(Get<Node3D>("Period"));
@@ -146,6 +148,7 @@ public sealed partial class Showreel : GalleryEffect
         ["periodScale"] = periodScale,
         ["rimScale"] = rimScale,
         ["cap"] = cap,
+        ["hatch"] = hatch,
         ["fade"] = fade,
     };
 

@@ -466,7 +466,21 @@ public class GalleryLanguageTests
         return labels;
     }
 
-    private static void Compare(Variant a, Variant b, string path, int tick)
+    // The compared properties of each object, by instance id: listing every property on every tick dominated the run.
+    private readonly Dictionary<ulong, StringName[]> compared = [];
+
+    private StringName[] ComparedProperties(GodotObject target)
+    {
+        if (!compared.TryGetValue(target.GetInstanceId(), out var names))
+        {
+            names = [.. target.GetPropertyList().Select(property => property["name"].AsString()).Where(Properties.Contains)
+                .Select(name => new StringName(name))];
+            compared[target.GetInstanceId()] = names;
+        }
+        return names;
+    }
+
+    private void Compare(Variant a, Variant b, string path, int tick)
     {
         if (a.VariantType == Variant.Type.Dictionary)
         {
@@ -486,11 +500,7 @@ public class GalleryLanguageTests
         else if (a.VariantType == Variant.Type.Object)
         {
             var left = a.AsGodotObject(); var right = b.AsGodotObject();
-            foreach (var property in left.GetPropertyList())
-            {
-                var name = property["name"].AsString();
-                if (Properties.Contains(name)) Compare(left.Get(name), right.Get(name), path + "." + name, tick);
-            }
+            foreach (var name in ComparedProperties(left)) Compare(left.Get(name), right.Get(name), path + "." + name, tick);
         }
         else
         {

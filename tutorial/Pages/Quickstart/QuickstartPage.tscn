@@ -397,7 +397,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "The call takes an endpoint, a duration in seconds, and an ease. The stage has Godot's default window size, so each endpoint is the pixel your game would get. The faint copies are a tenth of the duration apart: they bunch up where the icon slows down."
+Markdown = "The call takes an endpoint, a duration in seconds, and an ease. The faint copies are a tenth of the duration apart, so they bunch up where the icon slows down."
 
 [node name="AfterGDScript" type="RichTextLabel" parent="Scroll/Margin/Column/Content" groups=["gdscript"]]
 layout_mode = 2
@@ -406,7 +406,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "The definition takes an endpoint, a duration in seconds, and an ease. The stage has Godot's default window size, so each endpoint is the pixel your game would get. The faint copies are a tenth of the duration apart: they bunch up where the icon slows down."
+Markdown = "The definition takes an endpoint, a duration in seconds, and an ease. The faint copies are a tenth of the duration apart, so they bunch up where the icon slows down."
 
 [node name="SectionGap" type="Control" parent="Scroll/Margin/Column/Content"]
 custom_minimum_size = Vector2(0, 8)
@@ -487,7 +487,7 @@ scroll_active = false
 autowrap_mode = 3
 size_flags_horizontal = 3
 script = ExtResource("5_prose")
-Markdown = "**Start the tween.** Move this node to the click in 1.2 seconds; `Out.Back` overshoots, then settles. The call returns at once, and the tween plays over the next frames. C# needs `this.` to call an extension method on the node itself."
+Markdown = "**Start the tween.** Move to the click in 1.2 seconds; `Out.Back` overshoots, then settles. The call returns at once and the tween plays over the next frames. C# needs `this.` to call an extension method on the node itself."
 
 [node name="Note3" type="HBoxContainer" parent="Scroll/Margin/Column/Content/Moves/CSharpNotes"]
 layout_mode = 2
@@ -510,7 +510,7 @@ scroll_active = false
 autowrap_mode = 3
 size_flags_horizontal = 3
 script = ExtResource("5_prose")
-Markdown = "**Tune it.** The panel above sets these properties, as the Inspector would. **Spin too** adds a second tween."
+Markdown = "**Tune it.** The panel above sets these properties, as the Inspector would."
 
 [node name="GDScriptNotes" type="VBoxContainer" parent="Scroll/Margin/Column/Content/Moves" groups=["gdscript"]]
 layout_mode = 2
@@ -561,7 +561,7 @@ scroll_active = false
 autowrap_mode = 3
 size_flags_horizontal = 3
 script = ExtResource("5_prose")
-Markdown = "**Start the tween.** `Tweens.position_2d()` describes the move: to the click in 1.2 seconds, where `Out.BACK` overshoots, then settles. `Tweens.play()` starts it on this node and returns at once; the tween plays over the next frames."
+Markdown = "**Start the tween.** `Tweens.position_2d()` describes the move to the click in 1.2 seconds; `Out.BACK` overshoots, then settles. `Tweens.play()` starts it and returns at once."
 
 [node name="Note3" type="HBoxContainer" parent="Scroll/Margin/Column/Content/Moves/GDScriptNotes"]
 layout_mode = 2
@@ -584,27 +584,7 @@ scroll_active = false
 autowrap_mode = 3
 size_flags_horizontal = 3
 script = ExtResource("5_prose")
-Markdown = "**Tune it.** The panel above sets these variables, as the Inspector would. **Spin too** adds a second tween."
-
-[node name="SceneCSharp" type="RichTextLabel" parent="Scroll/Margin/Column/Content" groups=["csharp"]]
-layout_mode = 2
-theme_type_variation = &"SmallProse"
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-autowrap_mode = 3
-script = ExtResource("5_prose")
-Markdown = "This project's copy is `Lessons/Quickstart/ClickToMove.tscn`: open it and press F6."
-
-[node name="SceneGDScript" type="RichTextLabel" parent="Scroll/Margin/Column/Content" groups=["gdscript"]]
-layout_mode = 2
-theme_type_variation = &"SmallProse"
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-autowrap_mode = 3
-script = ExtResource("5_prose")
-Markdown = "This project's copy is `Lessons/Quickstart/click_to_move.tscn`: open it and press F6."
+Markdown = "**Tune it.** The panel above sets these variables, as the Inspector would."
 
 [node name="OthersCSharp" type="RichTextLabel" parent="Scroll/Margin/Column/Content" groups=["csharp"]]
 layout_mode = 2
@@ -644,7 +624,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "- Pick **Bounce**, or drag the duration down to 0.4 s.\n- Turn on **Spin too**: `this.TweenRotation(Rotation + Mathf.Tau, 1.2, InOut.SmootherStep);` runs below the first tween. Tweens of different properties play together, so the icon spins on its way."
+Markdown = "- Pick **Bounce**, or drag the duration down to 0.4 s.\n- Turn on **Spin too** for a second tween. Tweens of different properties play together, so the icon spins on its way."
 
 [node name="TryGDScript" type="PanelContainer" parent="Scroll/Margin/Column/Content" groups=["gdscript"]]
 layout_mode = 2
@@ -666,7 +646,7 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 3
 script = ExtResource("5_prose")
-Markdown = "- Pick **Bounce**, or drag the duration down to 0.4 s.\n- Turn on **Spin too**: `Tweens.play(self, Tweens.rotation_2d(rotation + TAU, 1.2, InOut.SMOOTHER_STEP))` runs as a second line under the `if`. Tweens of different properties play together, so the icon spins on its way."
+Markdown = "- Pick **Bounce**, or drag the duration down to 0.4 s.\n- Turn on **Spin too** for a second tween. Tweens of different properties play together, so the icon spins on its way."
 
 [node name="FooterGap" type="Control" parent="Scroll/Margin/Column/Content"]
 custom_minimum_size = Vector2(0, 16)

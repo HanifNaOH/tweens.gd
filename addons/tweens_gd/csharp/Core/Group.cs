@@ -68,8 +68,9 @@ public sealed class Group
         // Subscribe first: settling one member can cancel, and so settle, the others.
         foreach (var member in members)
             if (!member.IsSettled) member.Settled += OnSettled;
-        foreach (var member in members)
-            if (member.IsSettled) OnSettled(member);
+        // Snapshot first: cancellation can settle a subscribed member during this pass.
+        foreach (var member in members.Where(member => member.IsSettled).ToArray())
+            OnSettled(member);
     }
 
     /// <summary>Groups existing playback handles, including handles on different targets. Starts no new tweens.</summary>

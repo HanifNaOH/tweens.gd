@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Moritz Voss
 
+using System.Text.Json;
 using Godot;
+using tweens.gd.Tests.Support;
 
 namespace tweens.gd.Tests.Unit;
 
@@ -43,6 +45,28 @@ public class InterpolatorsTests
         Assert.Equal(new Color(0.5f, 0.25f, 0, 1), Interpolators.Color(new Color(0, 0, 0, 1), new Color(1, 0.5f, 0, 1), 0.5f,
             ColorSpace.Srgb, AlphaMode.Straight));
         Assert.Equal(new Rect2(1, 2, 3, 4), Interpolators.Rect2(new Rect2(0, 0, 2, 4), new Rect2(2, 4, 4, 4), 0.5f));
+    }
+
+    [Fact]
+    public void FiniteEndpointsNearOppositeLimitsInterpolateWithoutOverflow()
+    {
+        using var data = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "conformance", "endpoints.json")));
+        var test = data.RootElement.GetProperty("wide_interpolation");
+        var single = test.GetProperty("float").GetSingle();
+        var wide = test.GetProperty("double").GetDouble();
+        foreach (var sample in test.GetProperty("weights").EnumerateArray())
+        {
+            var weight = sample.GetSingle();
+            var expected = 2 * weight - 1;
+            Values.AssertClose(expected, Interpolators.Float(-single, single, weight) / single);
+            Values.AssertClose((double)expected, Interpolators.Double(-wide, wide, weight) / wide);
+            Values.AssertClose(new Vector2(expected, 1), Interpolators.Vector2(new(-single, 1), new(single, 1), weight) / new Vector2(single, 1));
+            Values.AssertClose(new Vector3(expected, 1, expected), Interpolators.Vector3(new(-single, 1, -single), new(single, 1, single), weight) / new Vector3(single, 1, single));
+            Values.AssertClose(new Vector4(expected, 1, expected, 1), Interpolators.Vector4(new(-single, 1, -single, 1), new(single, 1, single, 1), weight) / new Vector4(single, 1, single, 1));
+            var rect = Interpolators.Rect2(new(-single, 1, -single, 1), new(single, 1, single, 1), weight);
+            Values.AssertClose(new Vector2(expected, 1), rect.Position / new Vector2(single, 1));
+            Values.AssertClose(new Vector2(expected, 1), rect.Size / new Vector2(single, 1));
+        }
     }
 
     [Fact]

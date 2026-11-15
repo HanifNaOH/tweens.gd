@@ -91,6 +91,12 @@ public sealed partial class TweenScheduler : IDisposable
 
     internal void Enroll(TweenInstance instance)
     {
+        // A binding's Copy hook can dispose the scheduler before enrollment.
+        if (disposed)
+        {
+            instance.Finish(Reason.RunnerDisposed);
+            throw new ObjectDisposedException(nameof(TweenScheduler));
+        }
         instances.Add(instance);
         if (instance.CheckTarget()) instance.BindLifetime();
     }
@@ -193,15 +199,16 @@ public sealed partial class TweenScheduler : IDisposable
 
     internal void CancelOwner(Node owner, bool descendants)
     {
-        var count = instances.Count;
-        for (var i = 0; i < count && i < instances.Count; i++)
+        // Decide every match before cancellation callbacks can free or reparent nodes.
+        var matches = new List<TweenInstance>();
+        foreach (var instance in instances)
         {
-            var instance = instances[i];
             if (instance.IsTerminal) continue;
             var node = instance.Owner;
             if (node == owner || (descendants && GodotObject.IsInstanceValid(node) && owner.IsAncestorOf(node)))
-                instance.Cancel();
+                matches.Add(instance);
         }
+        foreach (var instance in matches) instance.Cancel();
     }
 
     private void Compact()
